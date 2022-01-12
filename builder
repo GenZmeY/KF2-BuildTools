@@ -12,6 +12,7 @@ ScriptFullname=$(readlink -e "$0")
 ScriptName=$(basename "$0")
 ScriptDir=$(dirname "$ScriptFullname")
 
+# Useful things
 source "$ScriptDir/helper.lib"
 
 # Common
@@ -61,7 +62,7 @@ KFEditorConfBackup="$KFEditorConf.backup"
 function show_help ()
 {
 	cat <<EOF
-Usage: $ScriptName OPTION
+Usage: $0 OPTION
 
 Build, pack, test and upload your kf2 packages to the Steam Workshop.
 
@@ -74,7 +75,15 @@ Available options:
  -bm, --brew-manual  the same (almost) as above, but with patched kfeditor by @notpeelz
   -u, --upload       upload package(s) to the Steam Workshop 
   -t, --test         run local single player test with $(basename "$MutTestConfig") parameters
+  -v, --version      show version
   -h, --help         show this help
+EOF
+}
+
+function show_version ()
+{
+	cat <<EOF
+$ScriptName $(git describe)
 EOF
 }
 
@@ -198,7 +207,10 @@ function compile ()
 	rm -rf "$KFUnpublish" "$KFPublish"
 	
 	mkdir -p "$KFUnpublishPackages" "$KFUnpublishScript"
+	
+	pushd "$MutSource"
 	find $PackageBuildOrder -type f -name '*.upk' -exec cp -f {} "$KFUnpublishPackages" \;
+	popd
 	
 	if [[ -d "$MutLocalization" ]]; then
 		mkdir -p "$KFUnpublishLocalization"
@@ -210,7 +222,7 @@ function compile ()
 		cp -rf "$MutConfig"/* "$KFUnpublishConfig"
 	fi
 	
-	CMD //C "$(cygpath -w "$KFEditor")" make -useunpublished &
+	CMD //C "$(cygpath -w "$KFEditor")" make -stripsource -useunpublished &
 	local PID="$!"
 	while ps -p "$PID" &> /dev/null
 	do
@@ -426,6 +438,7 @@ export PATH="$PATH:$ThirdPartyBin"
 if [[ $# -eq 0 ]]; then show_help; exit 0; fi
 case $1 in
 	  -h|--help             ) show_help             ;;
+	  -v|--version          ) show_version          ;;
 	 -ib|--init-build       ) init_build            ;;
 	 -it|--init-test        ) init_test             ;;
 	  -i|--init             ) init_build; init_test ;;
