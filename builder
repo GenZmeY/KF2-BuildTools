@@ -18,7 +18,6 @@ source "$ScriptDir/helper.lib"
 # Common
 SteamPath=$(reg_readkey "HKCU\Software\Valve\Steam" "SteamPath")
 DocumentsPath=$(reg_readkey "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" "Personal")
-WorkDir="$(dirname "$(readlink -e "$0")")"
 ThirdPartyBin="$ScriptDir/3rd-party-bin"
 
 # Usefull KF2 executables / Paths / Configs
@@ -55,8 +54,7 @@ KFPublishConfig="$KFPublish/Config"
 KFPublishLocalization="$KFPublish/Localization"
 
 # Tmp files
-MutWsInfoName="wsinfo.txt"
-MutWsInfo="$KFDoc/$MutWsInfoName"
+MutWsInfo="$KFDoc/wsinfo.txt"
 KFEditorConfBackup="$KFEditorConf.backup"
 
 function show_help ()
@@ -83,7 +81,7 @@ EOF
 function show_version ()
 {
 	cat <<EOF
-$ScriptName $(git describe)
+$ScriptName $(git describe 2> /dev/null)
 EOF
 }
 
@@ -111,7 +109,7 @@ function init_build ()
 	
 	:> "$MutBuildConfig"
 	
-	while read Package
+	while read -r Package
 	do
 		if [[ -z "$PackageList" ]]; then
 			PackageList="$Package"
@@ -129,6 +127,7 @@ function read_build_settings ()
 	if ! [[ -f "$MutBuildConfig" ]]; then init_build; fi
 	
 	if bash -n "$MutBuildConfig"; then
+		# shellcheck source=./.shellcheck/build.ini
 		source "$MutBuildConfig"
 	else
 		echo "$MutBuildConfig broken! Check this file before continue or create new one using $0 --init-build"
@@ -141,6 +140,7 @@ function read_test_settings ()
 	if ! [[ -f "$MutTestConfig" ]]; then init_test;	fi
 	
 	if bash -n "$MutTestConfig"; then
+		# shellcheck source=./.shellcheck/test.ini
 		source "$MutTestConfig"
 	else
 		echo "$MutTestConfig broken! Check this file before continue or create new one using $0 --init-test"
@@ -150,20 +150,22 @@ function read_test_settings ()
 
 function merge_packages () # $1: Mutator name
 {
+	local ModificationTime=""
 	local UpkList=""
+	local PID=""
 	
 	cp -f "$KFUnpublishScript/$1.u" "$KFWin64"
 	
-	while read Upk
+	while read -r Upk
 	do
 		cp -f "$MutSource/$1/$Upk" "$KFWin64"
 		UpkList="$UpkList $Upk"
 	done < <(find "$MutSource/$1" -type f -name '*.upk' -printf "%f\n")
 	
 	if [[ -n "$UpkList" ]]; then
-		local ModificationTime=$(stat -c %y "$KFWin64/$1.u")
-		CMD //C "cd "$(cygpath -w "$KFWin64")" && $(basename "$KFEditorMergePackages") make $UpkList $1.u" &
-		local PID="$!"
+		ModificationTime=$(stat -c %y "$KFWin64/$1.u")
+		CMD //C "cd \"$(cygpath -w "$KFWin64")\" && $(basename \""$KFEditorMergePackages"\") make $UpkList $1.u" &
+		PID="$!"
 		while ps -p "$PID" &> /dev/null
 		do
 			if [[ "$ModificationTime" != "$(stat -c %y "$KFWin64/$1.u")" ]]; then # file changed
@@ -189,6 +191,8 @@ function compiled ()
 
 function compile ()
 {
+	local PID=""
+	
 	read_build_settings
 	
 	if ! command -v multini &> /dev/null; then
@@ -208,9 +212,10 @@ function compile ()
 	
 	mkdir -p "$KFUnpublishPackages" "$KFUnpublishScript"
 	
-	pushd "$MutSource"
-	find $PackageBuildOrder -type f -name '*.upk' -exec cp -f {} "$KFUnpublishPackages" \;
-	popd
+	for Package in $PackageBuildOrder
+	do
+		find "$MutSource/$Package" -type f -name '*.upk' -exec cp -f {} "$KFUnpublishPackages" \;
+	done
 	
 	if [[ -d "$MutLocalization" ]]; then
 		mkdir -p "$KFUnpublishLocalization"
@@ -223,7 +228,7 @@ function compile ()
 	fi
 	
 	CMD //C "$(cygpath -w "$KFEditor")" make -stripsource -useunpublished &
-	local PID="$!"
+	PID="$!"
 	while ps -p "$PID" &> /dev/null
 	do
 		if compiled; then kill "$PID"; break; fi
@@ -258,6 +263,8 @@ function brewed ()
 
 function brew ()
 {
+	local PID=""
+	
 	read_build_settings
 	
 	if ! compiled ; then
@@ -269,8 +276,8 @@ function brew ()
 	
 	mkdir -p "$KFPublishBrewedPC"
 	
-	CMD //C "cd "$(cygpath -w "$KFWin64")" && "$(basename "$KFEditor")" brewcontent -platform=PC $PackageUpload -useunpublished" &
-	local PID="$!"
+	CMD //C "cd \"$(cygpath -w "$KFWin64")\" && \"$(basename "$KFEditor")\" brewcontent -platform=PC $PackageUpload -useunpublished" &
+	PID="$!"
 	while ps -p "$PID" &> /dev/null
 	do
 		if brewed; then kill "$PID"; break; fi
@@ -312,6 +319,8 @@ function brew_manual ()
 
 function upload ()
 {
+	local PreparedWsDir=""
+	
 	read_build_settings
 	
 	if ! compiled ; then
@@ -335,7 +344,7 @@ function upload ()
 		publish_common
 	fi
 	
-	local PreparedWsDir=$(mktemp -d -u -p "$KFDoc")
+	PreparedWsDir=$(mktemp -d -u -p "$KFDoc")
 	
 	cat > "$MutWsInfo" <<EOF
 \$Description \"$(cat "$MutPubContent/description.txt")\"
@@ -348,7 +357,7 @@ EOF
 	
 	cp -rf "$KFPublish"/* "$PreparedWsDir"
 	
-	CMD //C "$(cygpath -w "$KFWorkshop")" "$MutWsInfoName"
+	CMD //C "$(cygpath -w "$KFWorkshop")" "$(basename "$MutWsInfo")"
 	
 	rm -rf "$PreparedWsDir"
 	rm -f "$MutWsInfo"
@@ -362,7 +371,7 @@ function init_test ()
 	for Package in $PackageUpload
 	do
 		# find available mutators
-		while read MutClass
+		while read -r MutClass
 		do
 			if [[ -z "$AviableMutators" ]]; then
 				AviableMutators="$Package.$MutClass"
@@ -372,12 +381,12 @@ function init_test ()
 		done < <(grep -rihPo '\s.+extends\s(KF)?Mutator' "$MutSource/$Package" | awk '{ print $1 }')
 		
 		# find available gamemodes
-		while read GamemodeClass
+		while read -r GamemodeClass
 		do
 			if [[ -z "$AviableGamemodes" ]]; then
-				AviableGamemodes="$Package.$MutClass"
+				AviableGamemodes="$Package.$GamemodeClass"
 			else
-				AviableGamemodes="$AviableGamemodes,$Package.$MutClass"
+				AviableGamemodes="$AviableGamemodes,$Package.$GamemodeClass"
 			fi
 		done < <(grep -rihPo '\s.+extends\sKFGameInfo_' "$MutSource/$Package" | awk '{ print $1 }')
 	done
@@ -430,7 +439,7 @@ function run_test ()
 	
 	if ! brewed; then UseUnpublished="-useunpublished"; fi
 	
-	CMD //C "$(cygpath -w "$KFGame")" $Map?Difficulty=$Difficulty?GameLength=$GameLength?Game=$Game?Mutator=$Mutators?$Args $UseUnpublished -log
+	CMD //C "$(cygpath -w "$KFGame")" "$Map?Difficulty=$Difficulty?GameLength=$GameLength?Game=$Game?Mutator=$Mutators?$Args" "$UseUnpublished" -log
 }
 
 export PATH="$PATH:$ThirdPartyBin"
