@@ -13,7 +13,7 @@ ScriptName=$(basename "$0")
 ScriptDir=$(dirname "$ScriptFullname")
 
 # Useful things
-source "$ScriptDir/helper.lib"
+source "$ScriptDir/common.lib"
 
 # Common
 SteamPath=$(reg_readkey "HKCU\Software\Valve\Steam" "SteamPath")
@@ -38,8 +38,8 @@ MutSource="$ScriptDir/.."
 MutPubContent="$MutSource/PublicationContent"
 MutConfig="$MutSource/Config"
 MutLocalization="$MutSource/Localization"
-MutBuildConfig="$MutSource/build.ini" # not ini at all but who cares? :D
-MutTestConfig="$MutSource/test.ini"
+MutBuildConfig="$MutSource/build.cfg"
+MutTestConfig="$MutSource/test.cfg"
 
 # Steam workshop upload filesystem
 KFUnpublishBrewedPC="$KFUnpublish/BrewedPC"
