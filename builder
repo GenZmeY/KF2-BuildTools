@@ -65,16 +65,26 @@ Usage: $0 OPTION
 Build, pack, test and upload your kf2 packages to the Steam Workshop.
 
 Available options:
- -ib, --init-build   generate $(basename "$MutBuildConfig") with build parameters 
- -it, --init-test    generate $(basename "$MutTestConfig") with test parameters 
-  -i, --init         the same as "./$ScriptName --init-build; ./$ScriptName --init-test"
-  -c, --compile      build package(s)
-  -b, --brew         compress *.upk and place inside *.u
- -bm, --brew-manual  the same (almost) as above, but with patched kfeditor by @notpeelz
-  -u, --upload       upload package(s) to the Steam Workshop 
-  -t, --test         run local single player test with $(basename "$MutTestConfig") parameters
-  -v, --version      show version
-  -h, --help         show this help
+   -ib, --init-build   generate $(basename "$MutBuildConfig") with build parameters 
+   -it, --init-test    generate $(basename "$MutTestConfig") with test parameters 
+    -i, --init         the same as "./$ScriptName --init-build; ./$ScriptName --init-test"
+    -c, --compile      build package(s)
+    -b, --brew         compress *.upk and place inside *.u
+   -bm, --brew-manual  the same (almost) as above, but with patched kfeditor by @notpeelz
+    -u, --upload       upload package(s) to the Steam Workshop 
+    -t, --test         run local single player test with $(basename "$MutTestConfig") parameters
+    -v, --version      show version
+    -h, --help         show this help
+  
+Shortcuts for multiple options:
+   -cb                 compile, brew
+   -cu                 compile, upload
+  -cbm                 compile, brew_manual
+  -cbu                 compile, brew, upload
+ -cbmu                 compile, brew_manual, upload
+   -ct                 compile, run_test
+  -cbt                 compile, brew, run_test
+ -cbmt                 compile, brew_manual, run_test
 EOF
 }
 
@@ -448,15 +458,26 @@ export PATH="$PATH:$ThirdPartyBin"
 
 if [[ $# -eq 0 ]]; then show_help; exit 0; fi
 case $1 in
-	  -h|--help             ) show_help             ;;
-	  -v|--version          ) show_version          ;;
-	 -ib|--init-build       ) init_build            ;;
-	 -it|--init-test        ) init_test             ;;
-	  -i|--init             ) init_build; init_test ;;
-	  -c|--compile          ) compile               ;;
-	  -b|--brew             ) brew                  ;;
-	 -bm|--brew-manual      ) brew_manual           ;;
-	  -u|--upload           ) upload                ;;
-	  -t|--test             ) run_test              ;;
+# Options
+	  -h|--help             ) show_help                      ;;
+	  -v|--version          ) show_version                   ;;
+	 -ib|--init-build       ) init_build                     ;;
+	 -it|--init-test        ) init_test                      ;;
+	  -i|--init             ) init_build; init_test          ;;
+	  -c|--compile          ) compile                        ;;
+	  -b|--brew             ) brew                           ;;
+	 -bm|--brew-manual      ) brew_manual                    ;;
+	  -u|--upload           ) upload                         ;;
+	  -t|--test             ) run_test                       ;;
+# Shortcuts
+	  -cb                   ) compile; brew                  ;;
+	  -cu                   ) compile;              upload   ;;
+	  -cbm                  ) compile; brew_manual           ;;
+	  -cbu                  ) compile; brew;        upload   ;;
+	  -cbmu                 ) compile; brew_manual; upload   ;;
+	  -ct                   ) compile;              run_test ;;
+	  -cbt                  ) compile; brew;        run_test ;;
+	  -cbmt                 ) compile; brew_manual; run_test ;;
+# Other
 	    *                   ) echo "Command not recognized: $1"; exit 1 ;;
 esac
