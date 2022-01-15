@@ -13,7 +13,7 @@ ScriptName=$(basename "$0")
 ScriptDir=$(dirname "$ScriptFullname")
 
 # Useful things
-source "$ScriptDir/helper.lib"
+source "$ScriptDir/common.lib"
 
 # Common
 SteamPath=$(reg_readkey "HKCU\Software\Valve\Steam" "SteamPath")
@@ -38,8 +38,8 @@ MutSource="$ScriptDir/.."
 MutPubContent="$MutSource/PublicationContent"
 MutConfig="$MutSource/Config"
 MutLocalization="$MutSource/Localization"
-MutBuildConfig="$MutSource/build.ini" # not ini at all but who cares? :D
-MutTestConfig="$MutSource/test.ini"
+MutBuildConfig="$MutSource/build.cfg"
+MutTestConfig="$MutSource/test.cfg"
 
 # Steam workshop upload filesystem
 KFUnpublishBrewedPC="$KFUnpublish/BrewedPC"
@@ -127,7 +127,7 @@ function read_build_settings ()
 	if ! [[ -f "$MutBuildConfig" ]]; then init_build; fi
 	
 	if bash -n "$MutBuildConfig"; then
-		# shellcheck source=./.shellcheck/build.ini
+		# shellcheck source=./.shellcheck/build.cfg
 		source "$MutBuildConfig"
 	else
 		echo "$MutBuildConfig broken! Check this file before continue or create new one using $0 --init-build"
@@ -140,7 +140,7 @@ function read_test_settings ()
 	if ! [[ -f "$MutTestConfig" ]]; then init_test;	fi
 	
 	if bash -n "$MutTestConfig"; then
-		# shellcheck source=./.shellcheck/test.ini
+		# shellcheck source=./.shellcheck/test.cfg
 		source "$MutTestConfig"
 	else
 		echo "$MutTestConfig broken! Check this file before continue or create new one using $0 --init-test"

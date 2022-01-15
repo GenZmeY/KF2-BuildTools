@@ -1,0 +1,20 @@
+name: shellcheck-dev
+
+on:
+  push:
+    branches:
+      - '*'
+      - '!master'
+
+jobs:
+  shellcheck:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Run ShellCheck
+      uses: ludeeus/action-shellcheck@master
+      env:
+        SHELLCHECK_OPTS: -x
+      with:
+        additional_files: 'builder'
