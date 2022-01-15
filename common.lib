@@ -14,7 +14,7 @@ function get_latest () # $1: Reponame, $2: filename, $3: output filename
 	local LatestTag=$(curl --silent "$ApiUrl" | grep -Po '"tag_name": "\K.*?(?=")')
 	local DownloadUrl="https://github.com/$1/releases/download/$LatestTag/$2"
 	
-	mkdir -p $(dirname "$3")
+	mkdir -p "$(dirname "$3")/"
 	curl -LJs "$DownloadUrl" -o "$3"
 }
 

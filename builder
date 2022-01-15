@@ -164,7 +164,7 @@ function merge_packages () # $1: Mutator name
 	
 	if [[ -n "$UpkList" ]]; then
 		ModificationTime=$(stat -c %y "$KFWin64/$1.u")
-		CMD //C "cd \"$(cygpath -w "$KFWin64")\" && $(basename \""$KFEditorMergePackages"\") make $UpkList $1.u" &
+		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditorMergePackages") make $UpkList $1.u" &
 		PID="$!"
 		while ps -p "$PID" &> /dev/null
 		do
@@ -194,9 +194,9 @@ function compile ()
 	local PID=""
 	
 	read_build_settings
-	
+
 	if ! command -v multini &> /dev/null; then
-		get_latest_multini "$ThirdPartyBin"
+		get_latest_multini "$ThirdPartyBin/multini.exe"
 	fi
 	
 	backup_kfeditorconf
@@ -227,7 +227,7 @@ function compile ()
 		cp -rf "$MutConfig"/* "$KFUnpublishConfig"
 	fi
 	
-	CMD //C "$(cygpath -w "$KFEditor")" make -stripsource -useunpublished &
+	CMD //C "$(cygpath -w "$KFEditor") make -stripsource -useunpublished" &
 	PID="$!"
 	while ps -p "$PID" &> /dev/null
 	do
@@ -276,7 +276,7 @@ function brew ()
 	
 	mkdir -p "$KFPublishBrewedPC"
 	
-	CMD //C "cd \"$(cygpath -w "$KFWin64")\" && \"$(basename "$KFEditor")\" brewcontent -platform=PC $PackageUpload -useunpublished" &
+	CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditor") brewcontent -platform=PC $PackageUpload -useunpublished" &
 	PID="$!"
 	while ps -p "$PID" &> /dev/null
 	do
@@ -355,9 +355,9 @@ function upload ()
 \$PackageDirectory \"$(cygpath -w "$PreparedWsDir")\"
 EOF
 	
-	cp -rf "$KFPublish"/* "$PreparedWsDir"
+	cp -rf "$KFPublish" "$PreparedWsDir"
 	
-	CMD //C "$(cygpath -w "$KFWorkshop")" "$(basename "$MutWsInfo")"
+	CMD //C "$(cygpath -w "$KFWorkshop") $(basename "$MutWsInfo")"
 	
 	rm -rf "$PreparedWsDir"
 	rm -f "$MutWsInfo"
@@ -367,6 +367,8 @@ function init_test ()
 {
 	local AviableMutators=""
 	local AviableGamemodes=""
+	
+	read_build_settings
 	
 	for Package in $PackageUpload
 	do
@@ -439,7 +441,7 @@ function run_test ()
 	
 	if ! brewed; then UseUnpublished="-useunpublished"; fi
 	
-	CMD //C "$(cygpath -w "$KFGame")" "$Map?Difficulty=$Difficulty?GameLength=$GameLength?Game=$Game?Mutator=$Mutators?$Args" "$UseUnpublished" -log
+	CMD //C "$(cygpath -w "$KFGame") $Map?Difficulty=$Difficulty?GameLength=$GameLength?Game=$Game?Mutator=$Mutators?$Args $UseUnpublished" -log
 }
 
 export PATH="$PATH:$ThirdPartyBin"
