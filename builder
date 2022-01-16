@@ -376,12 +376,12 @@ function upload ()
 	PreparedWsDir=$(mktemp -d -u -p "$KFDoc")
 	
 	cat > "$MutWsInfo" <<EOF
-\$Description \"$(cat "$MutPubContent/description.txt")\"
-\$Title \"$(cat "$MutPubContent/title.txt")\"
-\$PreviewFile \"$(cygpath -w "$MutPubContent/preview.png")\"
-\$Tags \"$(cat "$MutPubContent/tags.txt")\"
-\$MicroTxItem \"false\"
-\$PackageDirectory \"$(cygpath -w "$PreparedWsDir")\"
+\$Description "$(cat "$MutPubContent/description.txt")"
+\$Title "$(cat "$MutPubContent/title.txt")"
+\$PreviewFile "$(cygpath -w "$MutPubContent/preview.png")"
+\$Tags "$(cat "$MutPubContent/tags.txt")"
+\$MicroTxItem "false"
+\$PackageDirectory "$(cygpath -w "$PreparedWsDir")"
 EOF
 	
 	cp -rf "$KFPublish" "$PreparedWsDir"
