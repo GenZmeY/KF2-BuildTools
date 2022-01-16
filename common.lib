@@ -8,6 +8,11 @@ function reg_readkey () # $1: path, $2: key
 	awk '{ $1=$2=""; print $0 }' )
 }
 
+function is_true () # $1: Bool arg to check
+{
+	echo "$1" | grep -Piq '^true$'
+}
+
 function get_latest () # $1: Reponame, $2: filename, $3: output filename
 {
 	local ApiUrl="https://api.github.com/repos/$1/releases/latest"

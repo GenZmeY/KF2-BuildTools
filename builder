@@ -128,8 +128,24 @@ function init_build ()
 		fi
 	done < <(find "$MutSource" -mindepth 2 -maxdepth 2 -type d -ipath '*/Classes' | sed -r 's|.+/([^/]+)/[^/]+|\1|' | sort)
 	
-	echo "PackageBuildOrder=\"$PackageList\""  >> "$MutBuildConfig"
-	echo "PackageUpload=\"$PackageList\"" >> "$MutBuildConfig"
+	cat > "$MutBuildConfig" <<EOF
+# Build parameters 
+
+# If True - compresses the mutator when compiling
+# Scripts will be stored in binary form
+# (reduces the size of the output file)
+StripSource="True"
+
+# Mutators to be compiled
+# Specify them with a space as a separator,
+# Mutators will be compiled in the specified order 
+PackageBuildOrder="$PackageList"
+
+# Mutators that will be uploaded to the workshop
+# Specify them with a space as a separator,
+# The order doesn't matter 
+PackageUpload="$PackageList"
+EOF
 }
 
 function read_build_settings ()
@@ -201,6 +217,7 @@ function compiled ()
 
 function compile ()
 {
+	local StripSourceArg=""
 	local PID=""
 	
 	read_build_settings
@@ -237,7 +254,9 @@ function compile ()
 		cp -rf "$MutConfig"/* "$KFUnpublishConfig"
 	fi
 	
-	CMD //C "$(cygpath -w "$KFEditor") make -stripsource -useunpublished" &
+	if is_true "$StripSource"; then StripSourceArg="-stripsource"; fi
+	
+	CMD //C "$(cygpath -w "$KFEditor") make $StripSourceArg -useunpublished" &
 	PID="$!"
 	while ps -p "$PID" &> /dev/null
 	do
