@@ -272,7 +272,9 @@ function compile ()
 	do
 		if compiled; then kill "$PID"; break; fi
 		sleep 1
-	done 
+	done
+	
+	find "$KFUnpublish" -type d -empty -delete
 	
 	restore_kfeditorconf
 }
@@ -339,7 +341,7 @@ function brew ()
 	publish_common
 	brew_cleanup
 	
-	find "$KFPublishBrewedPC" -type d -empty -delete
+	find "$KFPublish" -type d -empty -delete
 }
 
 function brew_manual ()
@@ -369,7 +371,7 @@ function brew_manual ()
 	
 	publish_common
 	
-	find "$KFPublishBrewedPC" -type d -empty -delete
+	find "$KFPublish" -type d -empty -delete
 }
 
 # Uploading without brewing
@@ -385,7 +387,7 @@ function publish_unpublished ()
 	
 	publish_common
 	
-	find "$KFPublishBrewedPC" -type d -empty -delete
+	find "$KFPublish" -type d -empty -delete
 }
 
 function upload ()
@@ -403,7 +405,7 @@ function upload ()
 		publish_unpublished
 	fi
 	
-	find "$KFPublishBrewedPC" -type d -empty -delete
+	find "$KFPublish" -type d -empty -delete
 	
 	PreparedWsDir=$(mktemp -d -u -p "$KFDoc")
 
