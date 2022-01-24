@@ -4,7 +4,6 @@
 # https://git-scm.com/download/win
 
 set -Eeuo pipefail
-# set -o xtrace
 
 trap cleanup SIGINT SIGTERM ERR EXIT
 
@@ -174,35 +173,46 @@ function read_test_settings ()
 	fi
 }
 
-function merge_packages () # $1: Mutator name
+function merge_package () # $1: What, $2: Where
 {
 	local ModificationTime=""
-	local UpkList=""
+	local ModificationTimeNew=""
 	local PID=""
 	
+	ModificationTime=$(stat -c %y "$KFWin64/$2")
+	CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditorMergePackages") make $1 $2" &
+	PID="$!"
+	while ps -p "$PID" &> /dev/null
+	do
+		ModificationTimeNew="$(stat -c %y "$KFWin64/$2")"
+		if [[ "$ModificationTime" != "$ModificationTimeNew" ]]; then # wait for write
+			while ps -p "$PID" &> /dev/null
+			do
+				ModificationTime="$ModificationTimeNew"
+				sleep 1
+				ModificationTimeNew="$(stat -c %y "$KFWin64/$2")"
+				if [[ "$ModificationTime" == "$ModificationTimeNew" ]]; then # wait for write finish
+					kill "$PID"
+					rm -f "$KFWin64/$1" # cleanup (auto)
+					return 0
+				fi
+			done
+		fi
+		sleep 1
+	done
+	
+	rm -f "$KFWin64/$1" # cleanup (manual)
+}
+
+function merge_packages () # $1: Mutator name
+{
 	cp -f "$KFUnpublishScript/$1.u" "$KFWin64"
 	
 	while read -r Upk
 	do
 		cp -f "$MutSource/$1/$Upk" "$KFWin64"
-		UpkList="$UpkList $Upk"
+		merge_package "$Upk" "$1.u"
 	done < <(find "$MutSource/$1" -type f -name '*.upk' -printf "%f\n")
-	
-	if [[ -n "$UpkList" ]]; then
-		ModificationTime=$(stat -c %y "$KFWin64/$1.u")
-		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditorMergePackages") make $UpkList $1.u" &
-		PID="$!"
-		while ps -p "$PID" &> /dev/null
-		do
-			if [[ "$ModificationTime" != "$(stat -c %y "$KFWin64/$1.u")" ]]; then # file changed
-				sleep 2 # wait a bit in case the file hasn't been written to the end yet 
-				kill "$PID"; break
-			fi
-			sleep 2
-		done
-	fi
-	
-	for Upk in $UpkList; do	rm -f "$KFWin64/$Upk"; done # cleanup
 }
 
 function compiled ()
@@ -261,7 +271,7 @@ function compile ()
 	while ps -p "$PID" &> /dev/null
 	do
 		if compiled; then kill "$PID"; break; fi
-		sleep 2
+		sleep 1
 	done 
 	
 	restore_kfeditorconf
@@ -290,6 +300,19 @@ function brewed ()
 	done
 }
 
+function brew_cleanup ()
+{
+	for Package in $PackageBuildOrder
+	do
+		if ! echo "$PackageUpload" | grep -Pq "(^|\s+)$Package(\s+|$)"; then
+			find "$KFPublishBrewedPC" -type f -name "$Package.u" -delete
+			find "$MutSource/$Package" -type f -name '*.upk' -printf "%f\n" | xargs -I{} find "$KFPublishBrewedPC" -type f -name {} -delete
+		fi
+	done
+	
+	rm -f "$KFPublishBrewedPC"/*.tmp
+}
+
 function brew ()
 {
 	local PID=""
@@ -310,12 +333,13 @@ function brew ()
 	while ps -p "$PID" &> /dev/null
 	do
 		if brewed; then kill "$PID"; break; fi
-		sleep 2
+		sleep 1
 	done
 	
 	publish_common
+	brew_cleanup
 	
-	rm -f "$KFPublishBrewedPC"/*.tmp # cleanup
+	find "$KFPublishBrewedPC" -type d -empty -delete
 }
 
 function brew_manual ()
@@ -329,21 +353,39 @@ function brew_manual ()
 	
 	rm -rf "$KFPublish"
 	
-	mkdir -p "$KFPublishBrewedPC" "$KFPublishScript"
+	mkdir -p "$KFPublishBrewedPC"
 
 	if ! [[ -x "$KFEditorPatcher" ]]; then
 		get_latest_kfeditor_patcher "$KFEditorPatcher"
 	fi
 	
-	pushd "$KFWin64" && "$KFEditorPatcher"; popd
+	CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditorPatcher")"
 	
 	for Package in $PackageUpload
 	do
 		merge_packages "$Package"
-		mv "$KFWin64/$Package.u" "$KFPublishScript"
+		mv "$KFWin64/$Package.u" "$KFPublishBrewedPC"
 	done
 	
 	publish_common
+	
+	find "$KFPublishBrewedPC" -type d -empty -delete
+}
+
+# Uploading without brewing
+function publish_unpublished ()
+{
+	mkdir -p "$KFPublishBrewedPC" "$KFPublishScript" "$KFPublishPackages"
+		
+	for Package in $PackageUpload
+	do
+		cp -f "$KFUnpublishScript/$Package.u" "$KFPublishScript"
+		find "$MutSource/$Package" -type f -name '*.upk' -exec cp -f {} "$KFPublishPackages" \;
+	done
+	
+	publish_common
+	
+	find "$KFPublishBrewedPC" -type d -empty -delete
 }
 
 function upload ()
@@ -358,23 +400,13 @@ function upload ()
 	fi
 	
 	if ! [[ -d "$KFPublish" ]]; then
-		echo "Warn: uploading without brewing"
-		mkdir -p "$KFPublishBrewedPC" "$KFPublishScript"
-		
-		for Package in $PackageUpload
-		do
-			cp -f "$KFUnpublishScript/$Package.u" "$KFPublishScript"
-		done
-		
-		if [[ -d "$KFUnpublishPackages" ]]; then
-			cp -rf "$KFUnpublishPackages" "$KFPublishPackages"
-		fi
-		
-		publish_common
+		publish_unpublished
 	fi
 	
-	PreparedWsDir=$(mktemp -d -u -p "$KFDoc")
+	find "$KFPublishBrewedPC" -type d -empty -delete
 	
+	PreparedWsDir=$(mktemp -d -u -p "$KFDoc")
+
 	cat > "$MutWsInfo" <<EOF
 \$Description "$(cat "$MutPubContent/description.txt")"
 \$Title "$(cat "$MutPubContent/title.txt")"
@@ -473,30 +505,54 @@ function run_test ()
 	CMD //C "$(cygpath -w "$KFGame") $Map?Difficulty=$Difficulty?GameLength=$GameLength?Game=$Game?Mutator=$Mutators?$Args $UseUnpublished" -log
 }
 
+function debug ()
+{
+	set -o xtrace
+}
+
 export PATH="$PATH:$ThirdPartyBin"
 
 if [[ $# -eq 0 ]]; then show_help; exit 0; fi
 case $1 in
 # Options
-	  -h|--help             ) show_help                      ;;
-	  -v|--version          ) show_version                   ;;
-	 -ib|--init-build       ) init_build                     ;;
-	 -it|--init-test        ) init_test                      ;;
-	  -i|--init             ) init_build; init_test          ;;
-	  -c|--compile          ) compile                        ;;
-	  -b|--brew             ) brew                           ;;
-	 -bm|--brew-manual      ) brew_manual                    ;;
-	  -u|--upload           ) upload                         ;;
-	  -t|--test             ) run_test                       ;;
+	  -h|--help             ) show_help                             ;;
+	  -v|--version          ) show_version                          ;;
+	 -ib|--init-build       ) init_build                            ;;
+	 -it|--init-test        ) init_test                             ;;
+	  -i|--init             ) init_build; init_test                 ;;
+	  -c|--compile          ) compile                               ;;
+	  -b|--brew             ) brew                                  ;;
+	 -bm|--brew-manual      ) brew_manual                           ;;
+	  -u|--upload           ) upload                                ;;
+	  -t|--test             ) run_test                              ;;
 # Shortcuts
-	  -cb                   ) compile; brew                  ;;
-	  -cu                   ) compile;              upload   ;;
-	  -cbm                  ) compile; brew_manual           ;;
-	  -cbu                  ) compile; brew;        upload   ;;
-	  -cbmu                 ) compile; brew_manual; upload   ;;
-	  -ct                   ) compile;              run_test ;;
-	  -cbt                  ) compile; brew;        run_test ;;
-	  -cbmt                 ) compile; brew_manual; run_test ;;
+	  -cb                   ) compile; brew                         ;;
+	  -cu                   ) compile;              upload          ;;
+	  -cbm                  ) compile; brew_manual                  ;;
+	  -cbu                  ) compile; brew;        upload          ;;
+	  -cbmu                 ) compile; brew_manual; upload          ;;
+	  -ct                   ) compile;              run_test        ;;
+	  -cbt                  ) compile; brew;        run_test        ;;
+	  -cbmt                 ) compile; brew_manual; run_test        ;;
+# Debug
+	  -dh                   ) debug; show_help                      ;;
+	  -dv                   ) debug; show_version                   ;;
+	  -dib                  ) debug; init_build                     ;;
+	  -dit                  ) debug; init_test                      ;;
+	  -di                   ) debug; init_build; init_test          ;;
+	  -dc                   ) debug; compile                        ;;
+	  -db                   ) debug; brew                           ;;
+	  -dbm                  ) debug; brew_manual                    ;;
+	  -du                   ) debug; upload                         ;;
+	  -dt                   ) debug; run_test                       ;;
+	  -dcb                  ) debug; compile; brew                  ;;
+	  -dcu                  ) debug; compile;              upload   ;;
+	  -dcbm                 ) debug; compile; brew_manual           ;;
+	  -dcbu                 ) debug; compile; brew;        upload   ;;
+	  -dcbmu                ) debug; compile; brew_manual; upload   ;;
+	  -dct                  ) debug; compile;              run_test ;;
+	  -dcbt                 ) debug; compile; brew;        run_test ;;
+	  -dcbmt                ) debug; compile; brew_manual; run_test ;;
 # Other
 	    *                   ) echo "Command not recognized: $1"; exit 1 ;;
 esac
