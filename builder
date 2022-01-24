@@ -300,6 +300,19 @@ function brewed ()
 	done
 }
 
+function brew_cleanup ()
+{
+	for Package in $PackageBuildOrder
+	do
+		if ! echo "$PackageUpload" | grep -Pq "(^|\s+)$Package(\s+|$)"; then
+			find "$KFPublishBrewedPC" -type f -name "$Package.u" -delete
+			find "$MutSource/$Package" -type f -name '*.upk' -printf "%f\n" | xargs -I{} find "$KFPublishBrewedPC" -type f -name {} -delete
+		fi
+	done
+	rm -f "$KFPublishBrewedPC"/*.tmp
+	find "$KFPublishBrewedPC" -type d -empty -delete
+}
+
 function brew ()
 {
 	local PID=""
@@ -324,8 +337,7 @@ function brew ()
 	done
 	
 	publish_common
-	
-	rm -f "$KFPublishBrewedPC"/*.tmp # cleanup
+	brew_cleanup
 }
 
 function brew_manual ()
