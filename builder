@@ -309,8 +309,8 @@ function brew_cleanup ()
 			find "$MutSource/$Package" -type f -name '*.upk' -printf "%f\n" | xargs -I{} find "$KFPublishBrewedPC" -type f -name {} -delete
 		fi
 	done
+	
 	rm -f "$KFPublishBrewedPC"/*.tmp
-	find "$KFPublishBrewedPC" -type d -empty -delete
 }
 
 function brew ()
@@ -338,6 +338,8 @@ function brew ()
 	
 	publish_common
 	brew_cleanup
+	
+	find "$KFPublishBrewedPC" -type d -empty -delete
 }
 
 function brew_manual ()
@@ -366,6 +368,24 @@ function brew_manual ()
 	done
 	
 	publish_common
+	
+	find "$KFPublishBrewedPC" -type d -empty -delete
+}
+
+# Uploading without brewing
+function publish_unpublished ()
+{
+	mkdir -p "$KFPublishBrewedPC" "$KFPublishScript" "$KFPublishPackages"
+		
+	for Package in $PackageUpload
+	do
+		cp -f "$KFUnpublishScript/$Package.u" "$KFPublishScript"
+		find "$MutSource/$Package" -type f -name '*.upk' -exec cp -f {} "$KFPublishPackages" \;
+	done
+	
+	publish_common
+	
+	find "$KFPublishBrewedPC" -type d -empty -delete
 }
 
 function upload ()
@@ -380,23 +400,13 @@ function upload ()
 	fi
 	
 	if ! [[ -d "$KFPublish" ]]; then
-		echo "Warn: uploading without brewing"
-		mkdir -p "$KFPublishBrewedPC" "$KFPublishScript"
-		
-		for Package in $PackageUpload
-		do
-			cp -f "$KFUnpublishScript/$Package.u" "$KFPublishScript"
-		done
-		
-		if [[ -d "$KFUnpublishPackages" ]]; then
-			cp -rf "$KFUnpublishPackages" "$KFPublishPackages"
-		fi
-		
-		publish_common
+		publish_unpublished
 	fi
 	
-	PreparedWsDir=$(mktemp -d -u -p "$KFDoc")
+	find "$KFPublishBrewedPC" -type d -empty -delete
 	
+	PreparedWsDir=$(mktemp -d -u -p "$KFDoc")
+
 	cat > "$MutWsInfo" <<EOF
 \$Description "$(cat "$MutPubContent/description.txt")"
 \$Title "$(cat "$MutPubContent/title.txt")"
