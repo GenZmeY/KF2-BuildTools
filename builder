@@ -23,6 +23,14 @@ set -Eeuo pipefail
 
 trap cleanup SIGINT SIGTERM ERR EXIT
 
+function reg_readkey () # $1: path, $2: key
+{
+	cygpath -u "$(
+	reg query "$1" //v "$2" | \
+	grep -F "$2"            | \
+	awk '{ $1=$2=""; print $0 }')"
+}
+
 # Whoami
 ScriptFullname=$(readlink -e "$0")
 ScriptName=$(basename "$0")
@@ -84,14 +92,6 @@ ArgDebug="false"
 ArgQuiet="false"
 ArgWarnings="false"
 ArgNoColors="false"
-
-function reg_readkey () # $1: path, $2: key
-{
-	cygpath -u "$(
-	reg query "$1" //v "$2" | \
-	grep -F "$2"            | \
-	awk '{ $1=$2=""; print $0 }')"
-}
 
 function is_true () # $1: Bool arg to check
 {
