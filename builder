@@ -54,12 +54,27 @@ KFPublishLocalization="$KFPublish/Localization"
 MutWsInfo="$KFDoc/wsinfo.txt"
 KFEditorConfBackup="$KFEditorConf.backup"
 
+# Args
+ArgInitBuild="false"
+ArgInitTest="false"
+ArgCompile="false"
+ArgBrew="false"
+ArgBrewManual="false"
+ArgUpload="false"
+ArgTest="false"
+ArgVersion="false"
+ArgHelp="false"
+ArgDebug="false"
+ArgQuiet="false"
+ArgWarnings="false"
+ArgNoColors="false"
+
 function reg_readkey () # $1: path, $2: key
 {
-	cygpath -u $(
+	cygpath -u "$(
 	reg query "$1" //v "$2" | \
 	grep -F "$2"            | \
-	awk '{ $1=$2=""; print $0 }' )
+	awk '{ $1=$2=""; print $0 }')"
 }
 
 function is_true () # $1: Bool arg to check
@@ -70,7 +85,8 @@ function is_true () # $1: Bool arg to check
 function get_latest () # $1: Reponame, $2: filename, $3: output filename
 {
 	local ApiUrl="https://api.github.com/repos/$1/releases/latest"
-	local LatestTag=$(curl --silent "$ApiUrl" | grep -Po '"tag_name": "\K.*?(?=")')
+	local LatestTag=""
+	LatestTag=$(curl --silent "$ApiUrl" | grep -Po '"tag_name": "\K.*?(?=")')
 	local DownloadUrl="https://github.com/$1/releases/download/$LatestTag/$2"
 	
 	mkdir -p "$(dirname "$3")/"
@@ -79,66 +95,112 @@ function get_latest () # $1: Reponame, $2: filename, $3: output filename
 
 function get_latest_multini () # $1: file to save
 {
+	msg "download latest multini"
 	get_latest "GenZmeY/multini" "multini-windows-amd64.exe" "$1"
 }
 
 function get_latest_kfeditor_patcher () # $1: file to save
 {
+	msg "download latest kfeditor-patcher"
 	get_latest "notpeelz/kfeditor-patcher" "kfeditor_patcher.exe" "$1"
 }
 
-function show_help ()
+function setup_colors ()
 {
-	cat <<EOF
-Usage: $0 OPTION
-
-Build, pack, test and upload your kf2 packages to the Steam Workshop.
-
-Available options:
-   -ib, --init-build   generate $(basename "$MutBuildConfig") with build parameters 
-   -it, --init-test    generate $(basename "$MutTestConfig") with test parameters 
-    -i, --init         the same as "./$ScriptName --init-build; ./$ScriptName --init-test"
-    -c, --compile      build package(s)
-    -b, --brew         compress *.upk and place inside *.u
-   -bm, --brew-manual  the same (almost) as above, but with patched kfeditor by @notpeelz
-    -u, --upload       upload package(s) to the Steam Workshop 
-    -t, --test         run local single player test with $(basename "$MutTestConfig") parameters
-    -v, --version      show version
-    -h, --help         show this help
-  
-Shortcuts for multiple options:
-   -cb                 compile, brew
-   -cu                 compile, upload
-  -cbm                 compile, brew_manual
-  -cbu                 compile, brew, upload
- -cbmu                 compile, brew_manual, upload
-   -ct                 compile, run_test
-  -cbt                 compile, brew, run_test
- -cbmt                 compile, brew_manual, run_test
-EOF
+	if [[ -t 2 ]] && ! is_true "$ArgNoColors" && [[ "${TERM-}" != "dumb" ]]; then
+		# shellcheck disable=SC2034
+		WHT='\e[37m'
+		RED='\e[31m'
+		# shellcheck disable=SC2034
+		GRN='\e[32m'
+		# shellcheck disable=SC2034
+		YLW='\e[33m'
+		DEF='\e[0m'
+		BLD='\e[1m'
+	else
+		# shellcheck disable=SC2034
+		WHT=''
+		RED=''
+		# shellcheck disable=SC2034
+		GRN=''
+		# shellcheck disable=SC2034
+		YLW=''
+		DEF=''
+		BLD=''
+	fi
 }
 
-function show_version ()
+function err () # $1: String
 {
-	cat <<EOF
-$ScriptName $(git describe 2> /dev/null)
-EOF
+	if ! is_true "$ArgQuiet"; then
+		echo -e "${RED}${1-}${DEF}" >&2
+	fi
+}
+
+function msg () # $1: String
+{
+	if ! is_true "$ArgQuiet"; then
+		echo -e "${DEF}${1-}" >&1
+	fi
+}
+
+function die () # $1: String, $2: Exit code
+{
+	err  "${1-}"
+	exit "${2-3}"
+}
+
+function usage ()
+{
+	msg "${BLD}Usage:${DEF} $0 OPTIONS"
+	msg ""
+	msg "Build, pack, test and upload your kf2 packages to the Steam Workshop."
+	msg ""
+	msg "${BLD}Available options:${DEF}"
+	msg "   -ib, --init-build   generate $(basename "$MutBuildConfig") with build parameters"
+	msg "   -it, --init-test    generate $(basename "$MutTestConfig") with test parameters"
+	msg "    -i, --init         the same as \"./$ScriptName --init-build; ./$ScriptName --init-test\""
+	msg "    -c, --compile      build package(s)"
+	msg "    -b, --brew         compress *.upk and place inside *.u"
+	msg "   -bm, --brew-manual  the same (almost) as above, but with patched kfeditor by @notpeelz"
+	msg "    -u, --upload       upload package(s) to the Steam Workshop"
+	msg "    -t, --test         run local single player test with $(basename "$MutTestConfig") parameters"
+	msg "    -q, --quiet        run without output"
+	msg "    -w, --warnings     do not close kf2editor automatically (to be able to read warnings)"
+	msg "   -nc, --no-colors    do not use color output"
+	msg "    -d, --debug        print every executed command (script debug)"
+	msg "    -v, --version      show version"
+	msg "    -h, --help         show this help"
+	msg ""
+	msg "${BLD}Short options can be combined, examples:${DEF}"
+	msg "  -cbu                 compile, brew, upload"
+	msg " -cbmt                 compile, brew_manual, run_test"
+	msg "  -wcb                 compile and brew without closing kf2editor"
+	msg "                       etc..."
+}
+
+function version ()
+{
+	msg "${BLD}$ScriptName $(git describe 2> /dev/null)${DEF}"
 }
 
 function cleanup()
 {
 	trap - SIGINT SIGTERM ERR EXIT
+	msg "cleanup..."
 	restore_kfeditorconf
 }
 
 function backup_kfeditorconf ()
 {
+	msg "backup $KFEditorConf"
 	cp -f "$KFEditorConf" "$KFEditorConfBackup"
 }
 
 function restore_kfeditorconf ()
 {
 	if [[ -f "$KFEditorConfBackup" ]]; then
+		msg "restore $KFEditorConf from backup"
 		mv -f "$KFEditorConfBackup" "$KFEditorConf"
 	fi
 }
@@ -146,6 +208,8 @@ function restore_kfeditorconf ()
 function init_build ()
 {
 	local PackageList=""
+	
+	msg "create new build config ($MutBuildConfig)"
 	
 	:> "$MutBuildConfig"
 	
@@ -186,8 +250,7 @@ function read_build_settings ()
 		# shellcheck source=./.shellcheck/build.cfg
 		source "$MutBuildConfig"
 	else
-		echo "$MutBuildConfig broken! Check this file before continue or create new one using $0 --init-build"
-		return 1
+		die "$MutBuildConfig broken! Check this file before continue or create new one using --init-build option" 2
 	fi
 }
 
@@ -199,7 +262,7 @@ function read_test_settings ()
 		# shellcheck source=./.shellcheck/test.cfg
 		source "$MutTestConfig"
 	else
-		echo "$MutTestConfig broken! Check this file before continue or create new one using $0 --init-test"
+		die "$MutTestConfig broken! Check this file before continue or create new one using --init-test option" 2
 		return 1
 	fi
 }
@@ -210,33 +273,41 @@ function merge_package () # $1: What, $2: Where
 	local ModificationTimeNew=""
 	local PID=""
 	
-	ModificationTime=$(stat -c %y "$KFWin64/$2")
-	CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditorMergePackages") make $1 $2" &
-	PID="$!"
-	while ps -p "$PID" &> /dev/null
-	do
-		ModificationTimeNew="$(stat -c %y "$KFWin64/$2")"
-		if [[ "$ModificationTime" != "$ModificationTimeNew" ]]; then # wait for write
-			while ps -p "$PID" &> /dev/null
-			do
-				ModificationTime="$ModificationTimeNew"
-				sleep 1
-				ModificationTimeNew="$(stat -c %y "$KFWin64/$2")"
-				if [[ "$ModificationTime" == "$ModificationTimeNew" ]]; then # wait for write finish
-					kill "$PID"
-					rm -f "$KFWin64/$1" # cleanup (auto)
-					return 0
-				fi
-			done
-		fi
-		sleep 1
-	done
+	msg "merge $1 to $2"
+	
+	if is_true "$ArgWarnings"; then
+		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditorMergePackages") make $1 $2"
+	else
+		ModificationTime=$(stat -c %y "$KFWin64/$2")
+		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditorMergePackages") make $1 $2" &
+		PID="$!"
+		while ps -p "$PID" &> /dev/null
+		do
+			ModificationTimeNew="$(stat -c %y "$KFWin64/$2")"
+			if [[ "$ModificationTime" != "$ModificationTimeNew" ]]; then # wait for write
+				while ps -p "$PID" &> /dev/null
+				do
+					ModificationTime="$ModificationTimeNew"
+					sleep 1
+					ModificationTimeNew="$(stat -c %y "$KFWin64/$2")"
+					if [[ "$ModificationTime" == "$ModificationTimeNew" ]]; then # wait for write finish
+						kill "$PID"
+						rm -f "$KFWin64/$1" # cleanup (auto)
+						return 0
+					fi
+				done
+			fi
+			sleep 1
+		done
+	fi
 	
 	rm -f "$KFWin64/$1" # cleanup (manual)
 }
 
 function merge_packages () # $1: Mutator name
 {
+	msg "merge packages for $1.u"
+	
 	cp -f "$KFUnpublishScript/$1.u" "$KFWin64"
 	
 	while read -r Upk
@@ -260,6 +331,8 @@ function compile ()
 {
 	local StripSourceArg=""
 	local PID=""
+	
+	msg "compilation"
 	
 	read_build_settings
 
@@ -297,13 +370,20 @@ function compile ()
 	
 	if is_true "$StripSource"; then StripSourceArg="-stripsource"; fi
 	
-	CMD //C "$(cygpath -w "$KFEditor") make $StripSourceArg -useunpublished" &
-	PID="$!"
-	while ps -p "$PID" &> /dev/null
-	do
-		if compiled; then kill "$PID"; break; fi
-		sleep 1
-	done
+	if is_true "$ArgWarnings"; then
+		CMD //C "$(cygpath -w "$KFEditor") make $StripSourceArg -useunpublished"
+		if ! compiled; then
+			die "compilation failed, details in Launch.log"
+		fi
+	else
+		CMD //C "$(cygpath -w "$KFEditor") make $StripSourceArg -useunpublished" &
+		PID="$!"
+		while ps -p "$PID" &> /dev/null
+		do
+			if compiled; then kill "$PID"; break; fi
+			sleep 1
+		done
+	fi
 	
 	find "$KFUnpublish" -type d -empty -delete
 	
@@ -350,24 +430,33 @@ function brew ()
 {
 	local PID=""
 	
+	msg "brew"
+	
 	read_build_settings
 	
 	if ! compiled ; then
-		echo "You must compile packages before brewing. Use $0 --compile for this."
-		exit 1
+		die "You must compile packages before brewing. Use --compile option for this." 2
 	fi
 	
 	rm -rf "$KFPublish"
 	
 	mkdir -p "$KFPublishBrewedPC"
 	
-	CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditor") brewcontent -platform=PC $PackageUpload -useunpublished" &
-	PID="$!"
-	while ps -p "$PID" &> /dev/null
-	do
-		if brewed; then kill "$PID"; break; fi
-		sleep 1
-	done
+	if is_true "$ArgWarnings"; then
+		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditor") brewcontent -platform=PC $PackageUpload -useunpublished"
+		if ! brewed; then
+			brew_cleanup
+			die "brewing failed, details in Launch.log"
+		fi
+	else
+		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditor") brewcontent -platform=PC $PackageUpload -useunpublished" &
+		PID="$!"
+		while ps -p "$PID" &> /dev/null
+		do
+			if brewed; then kill "$PID"; break; fi
+			sleep 1
+		done
+	fi
 	
 	publish_common
 	brew_cleanup
@@ -377,11 +466,12 @@ function brew ()
 
 function brew_manual ()
 {
+	msg "manual brew"
+
 	read_build_settings
 	
 	if ! compiled ; then
-		echo "You must compile packages before brewing. Use $0 --compile for this."
-		exit 1
+		die "You must compile packages before brewing. Use --compile option for this." 2
 	fi
 	
 	rm -rf "$KFPublish"
@@ -425,11 +515,12 @@ function upload ()
 {
 	local PreparedWsDir=""
 	
+	msg "upload to steam workshop"
+	
 	read_build_settings
 	
 	if ! compiled ; then
-		echo "You must compile packages before uploading. Use $0 --compile for this."
-		exit 1
+		die "You must compile packages before uploading. Use --compile option for this." 2
 	fi
 	
 	if ! [[ -d "$KFPublish" ]]; then
@@ -461,6 +552,8 @@ function init_test ()
 {
 	local AviableMutators=""
 	local AviableGamemodes=""
+	
+	msg "create new test config ($MutTestConfig)"
 	
 	read_build_settings
 	
@@ -530,6 +623,8 @@ function run_test ()
 {
 	local UseUnpublished=""
 	
+	msg "run test..."
+	
 	read_build_settings
 	read_test_settings
 	
@@ -538,54 +633,86 @@ function run_test ()
 	CMD //C "$(cygpath -w "$KFGame") $Map?Difficulty=$Difficulty?GameLength=$GameLength?Game=$Game?Mutator=$Mutators?$Args $UseUnpublished" -log
 }
 
-function debug ()
+function parse_combined_params () # $1: Combined short parameters
 {
-	set -o xtrace
+	local Param="${1}"
+	
+	local Length="${#Param}"
+	local Position=1
+	
+	while true
+	do
+		if [[ $((Position + 2)) -gt "$Length" ]]; then break; fi
+		case "${Param:$Position:2}" in
+			ib ) ((Position+=2)); ArgInitBuild="true"                      ;;
+			it ) ((Position+=2)); ArgInitTest="true"                       ;;
+			bm ) ((Position+=2)); ArgBrewManual="true"                     ;;
+			nc ) ((Position+=2)); ArgNoColors="true"                       ;;
+		esac
+		
+		if [[ $((Position + 1)) -gt "$Length" ]]; then break; fi
+		case "${Param:$Position:1}" in
+			h  ) ((Position+=1)); ArgHelp="true"                           ;;
+			v  ) ((Position+=1)); ArgVersion="true"                        ;;
+			i  ) ((Position+=1)); ArgInitBuild="true"; ArgInitTest="true"  ;;
+			c  ) ((Position+=1)); ArgCompile="true"                        ;;
+			b  ) ((Position+=1)); ArgBrew="true"                           ;;
+			u  ) ((Position+=1)); ArgUpload="true"                         ;;
+			t  ) ((Position+=1)); ArgTest="true"                           ;;
+			d  ) ((Position+=1)); ArgDebug="true"                          ;;
+			q  ) ((Position+=1)); ArgQuiet="true"                          ;;
+			*  ) die "Unknown short option: -${Param:$Position:1}" 1       ;;
+		esac
+	done
 }
 
-export PATH="$PATH:$ThirdPartyBin"
+function parse_params () # $@: Args
+{
+	while true
+	do
+		case "${1-}" in
+			  -h | --help        ) ArgHelp="true"                          ;;
+			  -v | --version     ) ArgVersion="true"                       ;;
+			 -ib | --init-build  ) ArgInitBuild="true"                     ;;
+			 -it | --init-test   ) ArgInitTest="true"                      ;;
+			  -i | --init        ) ArgInitBuild="true"; ArgInitTest="true" ;;
+			  -c | --compile     ) ArgCompile="true"                       ;;
+			  -b | --brew        ) ArgBrew="true"                          ;;
+			 -bm | --brew-manual ) ArgBrewManual="true"                    ;;
+			  -u | --upload      ) ArgUpload="true"                        ;;
+			  -t | --test        ) ArgTest="true"                          ;;
+			  -d | --debug       ) ArgDebug="true"                         ;;
+			  -q | --quiet       ) ArgQuiet="true"                         ;;
+			  -w | --warnings    ) ArgWarnings="true"                      ;;
+			 -nc | --no-color    ) ArgNoColors="true"                      ;;
+			       --*           ) die "Unknown option: ${1}" 1            ;;
+			  -*                 ) parse_combined_params "${1}"            ;;
+			     *               ) if [[ -n "${1-}" ]]; then die "Unknown option: ${1-}" 1; fi; break ;;
+		esac
+		shift
+	done
+}
 
-if [[ $# -eq 0 ]]; then show_help; exit 0; fi
-case $1 in
-# Options
-	  -h|--help             ) show_help                             ;;
-	  -v|--version          ) show_version                          ;;
-	 -ib|--init-build       ) init_build                            ;;
-	 -it|--init-test        ) init_test                             ;;
-	  -i|--init             ) init_build; init_test                 ;;
-	  -c|--compile          ) compile                               ;;
-	  -b|--brew             ) brew                                  ;;
-	 -bm|--brew-manual      ) brew_manual                           ;;
-	  -u|--upload           ) upload                                ;;
-	  -t|--test             ) run_test                              ;;
-# Shortcuts
-	  -cb                   ) compile; brew                         ;;
-	  -cu                   ) compile;              upload          ;;
-	  -cbm                  ) compile; brew_manual                  ;;
-	  -cbu                  ) compile; brew;        upload          ;;
-	  -cbmu                 ) compile; brew_manual; upload          ;;
-	  -ct                   ) compile;              run_test        ;;
-	  -cbt                  ) compile; brew;        run_test        ;;
-	  -cbmt                 ) compile; brew_manual; run_test        ;;
-# Debug
-	  -dh                   ) debug; show_help                      ;;
-	  -dv                   ) debug; show_version                   ;;
-	  -dib                  ) debug; init_build                     ;;
-	  -dit                  ) debug; init_test                      ;;
-	  -di                   ) debug; init_build; init_test          ;;
-	  -dc                   ) debug; compile                        ;;
-	  -db                   ) debug; brew                           ;;
-	  -dbm                  ) debug; brew_manual                    ;;
-	  -du                   ) debug; upload                         ;;
-	  -dt                   ) debug; run_test                       ;;
-	  -dcb                  ) debug; compile; brew                  ;;
-	  -dcu                  ) debug; compile;              upload   ;;
-	  -dcbm                 ) debug; compile; brew_manual           ;;
-	  -dcbu                 ) debug; compile; brew;        upload   ;;
-	  -dcbmu                ) debug; compile; brew_manual; upload   ;;
-	  -dct                  ) debug; compile;              run_test ;;
-	  -dcbt                 ) debug; compile; brew;        run_test ;;
-	  -dcbmt                ) debug; compile; brew_manual; run_test ;;
-# Other
-	    *                   ) echo "Command not recognized: $1"; exit 1 ;;
-esac
+function main ()
+{
+	if [[ $# -eq 0 ]]; then usage; die "" 0; fi
+	parse_params "$@"
+	setup_colors
+	export PATH="$PATH:$ThirdPartyBin"
+	
+	# Modifiers
+	if is_true "$ArgDebug";      then set -o xtrace;	 fi
+	
+	# Actions
+	if is_true "$ArgVersion";    then version; die "" 0; fi
+	if is_true "$ArgHelp";       then usage;   die "" 0; fi
+	if is_true "$ArgInitBuild";  then init_build;        fi
+	if is_true "$ArgInitTest";   then init_test;         fi
+	if is_true "$ArgCompile";    then compile;           fi
+	if is_true "$ArgBrew";       then brew;              fi
+	if is_true "$ArgBrewManual"; then brew_manual;       fi
+	if is_true "$ArgUpload";     then upload;            fi
+	if is_true "$ArgTest";       then run_test;          fi
+}
+
+main "$@"
