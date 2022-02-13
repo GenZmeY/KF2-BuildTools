@@ -7,12 +7,10 @@ set -Eeuo pipefail
 
 trap cleanup SIGINT SIGTERM ERR EXIT
 
+# Whoami
 ScriptFullname=$(readlink -e "$0")
 ScriptName=$(basename "$0")
 ScriptDir=$(dirname "$ScriptFullname")
-
-# Useful things
-source "$ScriptDir/common.lib"
 
 # Common
 SteamPath=$(reg_readkey "HKCU\Software\Valve\Steam" "SteamPath")
@@ -55,6 +53,39 @@ KFPublishLocalization="$KFPublish/Localization"
 # Tmp files
 MutWsInfo="$KFDoc/wsinfo.txt"
 KFEditorConfBackup="$KFEditorConf.backup"
+
+function reg_readkey () # $1: path, $2: key
+{
+	cygpath -u $(
+	reg query "$1" //v "$2" | \
+	grep -F "$2"            | \
+	awk '{ $1=$2=""; print $0 }' )
+}
+
+function is_true () # $1: Bool arg to check
+{
+	echo "$1" | grep -Piq '^true$'
+}
+
+function get_latest () # $1: Reponame, $2: filename, $3: output filename
+{
+	local ApiUrl="https://api.github.com/repos/$1/releases/latest"
+	local LatestTag=$(curl --silent "$ApiUrl" | grep -Po '"tag_name": "\K.*?(?=")')
+	local DownloadUrl="https://github.com/$1/releases/download/$LatestTag/$2"
+	
+	mkdir -p "$(dirname "$3")/"
+	curl -LJs "$DownloadUrl" -o "$3"
+}
+
+function get_latest_multini () # $1: file to save
+{
+	get_latest "GenZmeY/multini" "multini-windows-amd64.exe" "$1"
+}
+
+function get_latest_kfeditor_patcher () # $1: file to save
+{
+	get_latest "notpeelz/kfeditor-patcher" "kfeditor_patcher.exe" "$1"
+}
 
 function show_help ()
 {
