@@ -203,7 +203,6 @@ function version ()
 function cleanup()
 {
 	trap - SIGINT SIGTERM ERR EXIT
-	msg "cleanup..."
 	restore_kfeditorconf
 }
 
