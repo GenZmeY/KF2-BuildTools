@@ -94,6 +94,17 @@ ArgQuiet="false"
 ArgWarnings="false"
 ArgNoColors="false"
 
+# Colors
+# shellcheck disable=SC2034
+WHT=''
+RED=''
+# shellcheck disable=SC2034
+GRN=''
+# shellcheck disable=SC2034
+YLW=''
+DEF=''
+BLD=''
+
 function is_true () # $1: Bool arg to check
 {
 	echo "$1" | grep -Piq '^true$'
@@ -134,16 +145,6 @@ function setup_colors ()
 		YLW='\e[33m'
 		DEF='\e[0m'
 		BLD='\e[1m'
-	else
-		# shellcheck disable=SC2034
-		WHT=''
-		RED=''
-		# shellcheck disable=SC2034
-		GRN=''
-		# shellcheck disable=SC2034
-		YLW=''
-		DEF=''
-		BLD=''
 	fi
 }
 
@@ -395,7 +396,7 @@ function compile ()
 	if is_true "$ArgWarnings"; then
 		CMD //C "$(cygpath -w "$KFEditor") make $StripSourceArg -useunpublished"
 		if ! compiled; then
-			die "compilation failed, details in Launch.log"
+			die "compilation failed"
 		fi
 		msg "successfully compiled"
 	else
@@ -473,7 +474,7 @@ function brew ()
 		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditor") brewcontent -platform=PC $PackageUpload -useunpublished"
 		if ! brewed; then
 			brew_cleanup
-			die "brewing failed, details in Launch.log"
+			die "brewing failed"
 		fi
 		msg "successfully brewed"
 	else
@@ -668,13 +669,12 @@ function run_test ()
 function parse_combined_params () # $1: Combined short parameters
 {
 	local Param="${1}"
-	
 	local Length="${#Param}"
 	local Position=1
 	
 	while true
 	do
-		if [[ $((Position + 2)) -gt "$Length" ]]; then break; fi
+		if [[ $((Position + 1)) -gt "$Length" ]]; then break; fi
 		case "${Param:$Position:2}" in
 			ib ) ((Position+=2)); ArgInitBuild="true"                      ;;
 			it ) ((Position+=2)); ArgInitTest="true"                       ;;
@@ -682,7 +682,7 @@ function parse_combined_params () # $1: Combined short parameters
 			nc ) ((Position+=2)); ArgNoColors="true"                       ;;
 		esac
 		
-		if [[ $((Position + 1)) -gt "$Length" ]]; then break; fi
+		if [[ "$Position" -gt "$Length" ]]; then break; fi
 		case "${Param:$Position:1}" in
 			h  ) ((Position+=1)); ArgHelp="true"                           ;;
 			v  ) ((Position+=1)); ArgVersion="true"                        ;;
@@ -693,6 +693,7 @@ function parse_combined_params () # $1: Combined short parameters
 			t  ) ((Position+=1)); ArgTest="true"                           ;;
 			d  ) ((Position+=1)); ArgDebug="true"                          ;;
 			q  ) ((Position+=1)); ArgQuiet="true"                          ;;
+			w  ) ((Position+=1)); ArgWarnings="true"                       ;;
 			*  ) die "Unknown short option: -${Param:$Position:1}" 1       ;;
 		esac
 	done
