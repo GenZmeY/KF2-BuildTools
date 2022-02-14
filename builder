@@ -95,12 +95,8 @@ ArgWarnings="false"
 ArgNoColors="false"
 
 # Colors
-# shellcheck disable=SC2034
-WHT=''
 RED=''
-# shellcheck disable=SC2034
 GRN=''
-# shellcheck disable=SC2034
 YLW=''
 BLU=''
 DEF=''
@@ -121,7 +117,7 @@ function get_latest () # $1: Reponame, $2: filename, $3: output filename
 	msg "download $2 ($LatestTag)"
 	mkdir -p "$(dirname "$3")/"
 	curl -LJs "$DownloadUrl" -o "$3"
-	msg "successfully downloaded"
+	msg "${GRN}successfully downloaded${DEF}"
 }
 
 function get_latest_multini () # $1: file to save
@@ -137,12 +133,8 @@ function get_latest_kfeditor_patcher () # $1: file to save
 function setup_colors ()
 {
 	if [[ -t 2 ]] && ! is_true "$ArgNoColors" && [[ "${TERM-}" != "dumb" ]]; then
-		# shellcheck disable=SC2034
-		WHT='\e[37m'
 		RED='\e[31m'
-		# shellcheck disable=SC2034
 		GRN='\e[32m'
-		# shellcheck disable=SC2034
 		YLW='\e[33m'
 		BLU='\e[34m'
 		DEF='\e[0m'
@@ -163,7 +155,7 @@ function msg () # $1: String
 		if is_true "$ArgDebug"; then
 			echo -e "${BLU}${1-}${DEF}" >&1
 		else
-			echo -e "${DEF}${1-}" >&1
+			echo -e "${DEF}${1-}${DEF}" >&1
 		fi
 	fi
 }
@@ -222,14 +214,14 @@ function cleanup()
 
 function backup_kfeditorconf ()
 {
-	msg "backup $KFEditorConf"
+	msg "backup $(basename "$KFEditorConf") to $(basename "$KFEditorConfBackup")"
 	cp -f "$KFEditorConf" "$KFEditorConfBackup"
 }
 
 function restore_kfeditorconf ()
 {
 	if [[ -f "$KFEditorConfBackup" ]]; then
-		msg "restore $KFEditorConf from backup"
+		msg "restore $(basename "$KFEditorConf") from backup"
 		mv -f "$KFEditorConfBackup" "$KFEditorConf"
 	fi
 }
@@ -238,7 +230,7 @@ function init_build ()
 {
 	local PackageList=""
 	
-	msg "create new build config ($MutBuildConfig)"
+	msg "creating new build config"
 	
 	:> "$MutBuildConfig"
 	
@@ -250,6 +242,8 @@ function init_build ()
 			PackageList="$PackageList $Package"
 		fi
 	done < <(find "$MutSource" -mindepth 2 -maxdepth 2 -type d -ipath '*/Classes' | sed -r 's|.+/([^/]+)/[^/]+|\1|' | sort)
+	
+	msg "packages found: $PackageList"
 	
 	cat > "$MutBuildConfig" <<EOF
 # Build parameters 
@@ -269,6 +263,8 @@ PackageBuildOrder="$PackageList"
 # The order doesn't matter 
 PackageUpload="$PackageList"
 EOF
+
+	msg "${GRN}$(basename "$MutBuildConfig") created${DEF}"
 }
 
 function read_build_settings ()
@@ -404,7 +400,7 @@ function compile ()
 		if ! compiled; then
 			die "compilation failed"
 		fi
-		msg "successfully compiled"
+		msg "${GRN}successfully compiled${DEF}"
 	else
 		CMD //C "$(cygpath -w "$KFEditor") make $StripSourceArg -useunpublished" &
 		PID="$!"
@@ -412,7 +408,7 @@ function compile ()
 		do
 			if compiled; then
 				kill "$PID"
-				msg "successfully compiled"
+				msg "${GRN}successfully compiled${DEF}"
 				break
 			fi
 			sleep 1
@@ -482,7 +478,7 @@ function brew ()
 			brew_cleanup
 			die "brewing failed"
 		fi
-		msg "successfully brewed"
+		msg "${GRN}successfully brewed${DEF}"
 	else
 		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditor") brewcontent -platform=PC $PackageUpload -useunpublished" &
 		PID="$!"
@@ -490,7 +486,7 @@ function brew ()
 		do
 			if brewed; then
 				kill "$PID"
-				msg "successfully brewed"
+				msg "${GRN}successfully brewed${DEF}"
 				break
 			fi
 			sleep 1
@@ -521,9 +517,9 @@ function brew_manual ()
 		get_latest_kfeditor_patcher "$KFEditorPatcher"
 	fi
 	
-	msg "patching $(basename $KFEditor)"
+	msg "patching $(basename "$KFEditor")"
 	CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditorPatcher")"
-	msg "successfully patched"
+	msg "${GRN}successfully patched${DEF}"
 	
 	for Package in $PackageUpload
 	do
@@ -531,16 +527,17 @@ function brew_manual ()
 		mv "$KFWin64/$Package.u" "$KFPublishBrewedPC"
 	done
 	
-	msg "successfully brewed"
+	msg "${GRN}successfully brewed${DEF}"
 	
 	publish_common
 	
 	find "$KFPublish" -type d -empty -delete
 }
 
-# Uploading without brewing
 function publish_unpublished ()
 {
+	msg "${YLW}warn: uploading without brewing${DEF}"
+	
 	mkdir -p "$KFPublishBrewedPC" "$KFPublishScript" "$KFPublishPackages"
 		
 	for Package in $PackageUpload
@@ -557,8 +554,6 @@ function publish_unpublished ()
 function upload ()
 {
 	local PreparedWsDir=""
-	
-	msg "upload to steam workshop"
 	
 	read_build_settings
 	
@@ -585,7 +580,13 @@ EOF
 	
 	cp -rf "$KFPublish" "$PreparedWsDir"
 	
-	CMD //C "$(cygpath -w "$KFWorkshop") $(basename "$MutWsInfo")"
+	msg "upload to steam workshop"
+	if is_true "$ArgQuiet"; then
+		CMD //C "$(cygpath -w "$KFWorkshop") $(basename "$MutWsInfo")" &>/dev/null
+	else
+		CMD //C "$(cygpath -w "$KFWorkshop") $(basename "$MutWsInfo")"
+	fi
+	msg "${GRN}successfully uploaded to steam workshop${DEF}"
 	
 	rm -rf "$PreparedWsDir"
 	rm -f "$MutWsInfo"
@@ -596,7 +597,7 @@ function init_test ()
 	local AviableMutators=""
 	local AviableGamemodes=""
 	
-	msg "create new test config ($MutTestConfig)"
+	msg "creating new test config"
 	
 	read_build_settings
 	
@@ -623,8 +624,14 @@ function init_test ()
 		done < <(grep -rihPo '\s.+extends\sKFGameInfo_' "$MutSource/$Package" | awk '{ print $1 }')
 	done
 	
+	if [[ -n "$AviableMutators" ]]; then
+		msg "mutators found: $AviableMutators"
+	fi
+	
 	if [[ -z "$AviableGamemodes" ]]; then
 		AviableGamemodes="KFGameContent.KFGameInfo_Survival"
+	else
+		msg "custom gamemodes found: $AviableGamemodes"
 	fi
 	
 	cat > "$MutTestConfig" <<EOF
@@ -660,18 +667,23 @@ Mutators="$AviableMutators"
 # Additional parameters
 Args=""
 EOF
+
+	msg "${GRN}$(basename "$MutTestConfig") created${DEF}"
 }
 
 function run_test ()
 {
 	local UseUnpublished=""
 	
-	msg "run test..."
-	
 	read_build_settings
 	read_test_settings
 	
-	if ! brewed; then UseUnpublished="-useunpublished"; fi
+	if ! brewed; then
+		UseUnpublished="-useunpublished"
+		msg "run test (unpublished)"
+	else
+		msg "run test (brewed)"
+	fi
 	
 	CMD //C "$(cygpath -w "$KFGame") $Map?Difficulty=$Difficulty?GameLength=$GameLength?Game=$Game?Mutator=$Mutators?$Args $UseUnpublished" -log
 }
