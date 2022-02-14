@@ -168,31 +168,37 @@ function die () # $1: String, $2: Exit code
 
 function usage ()
 {
-	msg "${BLD}Usage:${DEF} $0 OPTIONS"
-	msg ""
-	msg "Build, pack, test and upload your kf2 packages to the Steam Workshop."
-	msg ""
-	msg "${BLD}Available options:${DEF}"
-	msg "   -ib, --init-build   generate $(basename "$MutBuildConfig") with build parameters"
-	msg "   -it, --init-test    generate $(basename "$MutTestConfig") with test parameters"
-	msg "    -i, --init         the same as \"./$ScriptName --init-build; ./$ScriptName --init-test\""
-	msg "    -c, --compile      build package(s)"
-	msg "    -b, --brew         compress *.upk and place inside *.u"
-	msg "   -bm, --brew-manual  the same (almost) as above, but with patched kfeditor by @notpeelz"
-	msg "    -u, --upload       upload package(s) to the Steam Workshop"
-	msg "    -t, --test         run local single player test with $(basename "$MutTestConfig") parameters"
-	msg "    -q, --quiet        run without output"
-	msg "    -w, --warnings     do not close kf2editor automatically (to be able to read warnings)"
-	msg "   -nc, --no-colors    do not use color output"
-	msg "    -d, --debug        print every executed command (script debug)"
-	msg "    -v, --version      show version"
-	msg "    -h, --help         show this help"
-	msg ""
-	msg "${BLD}Short options can be combined, examples:${DEF}"
-	msg "  -cbu                 compile, brew, upload"
-	msg " -cbmt                 compile, brew_manual, run_test"
-	msg "  -wcb                 compile and brew without closing kf2editor"
-	msg "                       etc..."
+	local HelpMessage=""
+	
+	HelpMessage=$(cat <<EOF
+${BLD}Usage:${DEF} $0 OPTIONS
+
+Build, pack, test and upload your kf2 packages to the Steam Workshop.
+
+${BLD}Available options:${DEF}
+   -ib, --init-build   generate $(basename "$MutBuildConfig") with build parameters
+   -it, --init-test    generate $(basename "$MutTestConfig") with test parameters
+    -i, --init         the same as "./$ScriptName --init-build; ./$ScriptName --init-test"
+    -c, --compile      build package(s)
+    -b, --brew         compress *.upk and place inside *.u
+   -bm, --brew-manual  the same (almost) as above, but with patched kfeditor by @notpeelz
+    -u, --upload       upload package(s) to the Steam Workshop
+    -t, --test         run local single player test with $(basename "$MutTestConfig") parameters
+    -q, --quiet        run without output
+    -w, --warnings     do not close kf2editor automatically (to be able to read warnings)
+   -nc, --no-colors    do not use color output
+    -d, --debug        print every executed command (script debug)
+    -v, --version      show version
+    -h, --help         show this help
+
+${BLD}Short options can be combined, examples:${DEF}
+  -cbu                 compile, brew, upload
+ -cbmt                 compile, brew_manual, run_test
+  -wcb                 compile and brew without closing kf2editor
+                       etc...
+EOF
+)
+	msg "$HelpMessage"
 }
 
 function version ()
