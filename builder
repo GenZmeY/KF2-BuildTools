@@ -696,7 +696,7 @@ function parse_combined_params () # $1: Combined short parameters
 	
 	while true
 	do
-		if [[ $((Position + 1)) -ge "$Length" ]]; then break; fi
+		if [[ "$Position" -ge "$Length" ]]; then break; fi
 		case "${Param:$Position:2}" in
 			ib ) ((Position+=2)); ArgInitBuild="true"                      ;;
 			it ) ((Position+=2)); ArgInitTest="true"                       ;;
