@@ -102,6 +102,7 @@ RED=''
 GRN=''
 # shellcheck disable=SC2034
 YLW=''
+BLU=''
 DEF=''
 BLD=''
 
@@ -117,19 +118,19 @@ function get_latest () # $1: Reponame, $2: filename, $3: output filename
 	LatestTag=$(curl --silent "$ApiUrl" | grep -Po '"tag_name": "\K.*?(?=")')
 	local DownloadUrl="https://github.com/$1/releases/download/$LatestTag/$2"
 	
+	msg "download $2 ($LatestTag)"
 	mkdir -p "$(dirname "$3")/"
 	curl -LJs "$DownloadUrl" -o "$3"
+	msg "successfully downloaded"
 }
 
 function get_latest_multini () # $1: file to save
 {
-	msg "download latest multini"
 	get_latest "GenZmeY/multini" "multini-windows-amd64.exe" "$1"
 }
 
 function get_latest_kfeditor_patcher () # $1: file to save
 {
-	msg "download latest kfeditor-patcher"
 	get_latest "notpeelz/kfeditor-patcher" "kfeditor_patcher.exe" "$1"
 }
 
@@ -143,6 +144,7 @@ function setup_colors ()
 		GRN='\e[32m'
 		# shellcheck disable=SC2034
 		YLW='\e[33m'
+		BLU='\e[34m'
 		DEF='\e[0m'
 		BLD='\e[1m'
 	fi
@@ -158,7 +160,11 @@ function err () # $1: String
 function msg () # $1: String
 {
 	if ! is_true "$ArgQuiet"; then
-		echo -e "${DEF}${1-}" >&1
+		if is_true "$ArgDebug"; then
+			echo -e "${BLU}${1-}${DEF}" >&1
+		else
+			echo -e "${DEF}${1-}" >&1
+		fi
 	fi
 }
 
@@ -296,7 +302,7 @@ function merge_package () # $1: What, $2: Where
 	local ModificationTimeNew=""
 	local PID=""
 	
-	msg "merge $1 to $2"
+	msg "merge $1 into $2"
 	
 	if is_true "$ArgWarnings"; then
 		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditorMergePackages") make $1 $2"
@@ -515,13 +521,17 @@ function brew_manual ()
 		get_latest_kfeditor_patcher "$KFEditorPatcher"
 	fi
 	
+	msg "patching $(basename $KFEditor)"
 	CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditorPatcher")"
+	msg "successfully patched"
 	
 	for Package in $PackageUpload
 	do
 		merge_packages "$Package"
 		mv "$KFWin64/$Package.u" "$KFPublishBrewedPC"
 	done
+	
+	msg "successfully brewed"
 	
 	publish_common
 	
@@ -674,7 +684,7 @@ function parse_combined_params () # $1: Combined short parameters
 	
 	while true
 	do
-		if [[ $((Position + 1)) -gt "$Length" ]]; then break; fi
+		if [[ $((Position + 1)) -ge "$Length" ]]; then break; fi
 		case "${Param:$Position:2}" in
 			ib ) ((Position+=2)); ArgInitBuild="true"                      ;;
 			it ) ((Position+=2)); ArgInitTest="true"                       ;;
@@ -682,7 +692,7 @@ function parse_combined_params () # $1: Combined short parameters
 			nc ) ((Position+=2)); ArgNoColors="true"                       ;;
 		esac
 		
-		if [[ "$Position" -gt "$Length" ]]; then break; fi
+		if [[ "$Position" -ge "$Length" ]]; then break; fi
 		case "${Param:$Position:1}" in
 			h  ) ((Position+=1)); ArgHelp="true"                           ;;
 			v  ) ((Position+=1)); ArgVersion="true"                        ;;
