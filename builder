@@ -26,9 +26,10 @@ trap cleanup SIGINT SIGTERM ERR EXIT
 function reg_readkey () # $1: path, $2: key
 {
 	cygpath -u "$(
-	reg query "$1" //v "$2" | \
-	grep -F "$2"            | \
-	awk '{ $1=$2=""; print $0 }')"
+	reg query "$1" //v "$2"      | \
+	grep -F "$2"                 | \
+	awk '{ $1=$2=""; print $0 }' | \
+	sed -r 's|^\s*(.+)\s*|\1|g')"
 }
 
 # Whoami
@@ -353,8 +354,6 @@ function compile ()
 	local StripSourceArg=""
 	local PID=""
 	
-	msg "compilation"
-	
 	read_build_settings
 
 	if ! command -v multini &> /dev/null; then
@@ -391,17 +390,24 @@ function compile ()
 	
 	if is_true "$StripSource"; then StripSourceArg="-stripsource"; fi
 	
+	msg "compilation"
+	
 	if is_true "$ArgWarnings"; then
 		CMD //C "$(cygpath -w "$KFEditor") make $StripSourceArg -useunpublished"
 		if ! compiled; then
 			die "compilation failed, details in Launch.log"
 		fi
+		msg "successfully compiled"
 	else
 		CMD //C "$(cygpath -w "$KFEditor") make $StripSourceArg -useunpublished" &
 		PID="$!"
 		while ps -p "$PID" &> /dev/null
 		do
-			if compiled; then kill "$PID"; break; fi
+			if compiled; then
+				kill "$PID"
+				msg "successfully compiled"
+				break
+			fi
 			sleep 1
 		done
 	fi
@@ -451,7 +457,7 @@ function brew ()
 {
 	local PID=""
 	
-	msg "brew"
+	msg "brewing"
 	
 	read_build_settings
 	
@@ -469,12 +475,17 @@ function brew ()
 			brew_cleanup
 			die "brewing failed, details in Launch.log"
 		fi
+		msg "successfully brewed"
 	else
 		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditor") brewcontent -platform=PC $PackageUpload -useunpublished" &
 		PID="$!"
 		while ps -p "$PID" &> /dev/null
 		do
-			if brewed; then kill "$PID"; break; fi
+			if brewed; then
+				kill "$PID"
+				msg "successfully brewed"
+				break
+			fi
 			sleep 1
 		done
 	fi
@@ -487,7 +498,7 @@ function brew ()
 
 function brew_manual ()
 {
-	msg "manual brew"
+	msg "manual brewing"
 
 	read_build_settings
 	
