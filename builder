@@ -25,11 +25,13 @@ trap cleanup SIGINT SIGTERM ERR EXIT
 
 function reg_readkey () # $1: path, $2: key
 {
-	cygpath -u "$(
-	reg query "$1" //v "$2"      | \
-	grep -F "$2"                 | \
-	awk '{ $1=$2=""; print $0 }' | \
-	sed -r 's|^\s*(.+)\s*|\1|g')"
+	if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
+		cygpath -u "$(
+		reg query "$1" //v "$2"      | \
+		grep -F "$2"                 | \
+		awk '{ $1=$2=""; print $0 }' | \
+		sed -r 's|^\s*(.+)\s*|\1|g')"
+	fi
 }
 
 # Whoami

@@ -1,0 +1,41 @@
+name: docs-autoupdate
+
+on:
+  push:
+    branches:
+      - '*'
+      
+jobs:
+  update-docs:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Update docs
+      run: |
+        if ! [[ -e USAGE.md ]]; then touch USAGE.md; fi
+        mv USAGE.md USAGE.md.old
+        mkdir tools
+        cp ./builder ./tools/
+        chmod +x ./tools/builder
+        echo '# KF2-BuildTools'                                                                                                                                                                                 >> USAGE.md
+        echo '[![title](https://img.shields.io/badge/Help-Page-w)](https://github.com/GenZmeY/KF2-BuildTools)'                                                                                                  >> USAGE.md
+        echo '[![version](https://img.shields.io/github/v/tag/genzmey/KF2-BuildTools)](https://github.com/GenZmeY/KF2-BuildTools/tags)'                                                                              >> USAGE.md
+        echo '[![docs-autoupdate](https://github.com/GenZmeY/KF2-BuildTools/actions/workflows/docs-autoupdate.yml/badge.svg)](https://github.com/GenZmeY/KF2-BuildTools/actions/workflows/docs-autoupdate.yml)' >> USAGE.md
+        echo '```'                                                                                                                                                                                              >> USAGE.md
+        ./tools/builder -nch                                                                                                                                                                                    >> USAGE.md
+        echo '```'                                                                                                                                                                                              >> USAGE.md
+        if ! cmp -s USAGE.md USAGE.md.old; then
+            git config --local user.email "github-actions[bot]@users.noreply.github.com"
+            git config --local user.name "github-actions"
+            git add USAGE.md
+            git commit -m "Update USAGE.md to version $(git describe 2> /dev/null)"
+        else
+            echo "No change, skip updating USAGE.md"
+        fi
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: ${{ github.ref }}
