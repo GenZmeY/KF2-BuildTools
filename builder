@@ -43,6 +43,7 @@ ScriptDir=$(dirname "$ScriptFullname")
 SteamPath=$(reg_readkey "HKCU\Software\Valve\Steam" "SteamPath")
 DocumentsPath=$(reg_readkey "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" "Personal")
 ThirdPartyBin="$ScriptDir/3rd-party-bin"
+DummyPreview="$ScriptDir/dummy_preview.png"
 
 # Usefull KF2 executables / Paths / Configs
 KFDoc="$DocumentsPath/My Games/KillingFloor2"
@@ -59,11 +60,14 @@ KFEditorConf="$KFDoc/KFGame/Config/KFEditor.ini"
 
 # Source filesystem
 MutSource="$ScriptDir/.."
-MutPubContent="$MutSource/PublicationContent"
 MutConfig="$MutSource/Config"
 MutLocalization="$MutSource/Localization"
-MutBuildConfig="$MutSource/build.cfg"
-MutTestConfig="$MutSource/test.cfg"
+MutBuilderConfig="$MutSource/builder.cfg"
+MutPubContent="$MutSource/PublicationContent"
+MutPubContentDescription="$MutPubContent/description.txt"
+MutPubContentTitle="$MutPubContent/title.txt"
+MutPubContentPreview="$MutPubContent/preview.png"
+MutPubContentTags="$MutPubContent/tags.txt"
 
 # Steam workshop upload filesystem
 KFUnpublishBrewedPC="$KFUnpublish/BrewedPC"
@@ -82,8 +86,7 @@ MutWsInfo="$KFDoc/wsinfo.txt"
 KFEditorConfBackup="$KFEditorConf.backup"
 
 # Args
-ArgInitBuild="false"
-ArgInitTest="false"
+ArgInit="false"
 ArgCompile="false"
 ArgBrew="false"
 ArgBrewManual="false"
@@ -95,6 +98,7 @@ ArgDebug="false"
 ArgQuiet="false"
 ArgWarnings="false"
 ArgNoColors="false"
+ArgForce="false"
 
 # Colors
 RED=''
@@ -130,6 +134,15 @@ function get_latest_multini () # $1: file to save
 function get_latest_kfeditor_patcher () # $1: file to save
 {
 	get_latest "notpeelz/kfeditor-patcher" "kfeditor_patcher.exe" "$1"
+}
+
+function repo_url () # $1: remote.origin.url
+{
+	if echo "$1" | grep -qoP '^https?://'; then
+		echo "$1" | sed -r 's|\.git||'
+	else
+		echo "$1" | sed -r 's|^.+:(.+)\.git$|https://github.com/\1|' 
+	fi
 }
 
 function setup_colors ()
@@ -178,14 +191,13 @@ ${BLD}Usage:${DEF} $0 OPTIONS
 Build, pack, test and upload your kf2 packages to the Steam Workshop.
 
 ${BLD}Available options:${DEF}
-   -ib, --init-build   generate $(basename "$MutBuildConfig") with build parameters
-   -it, --init-test    generate $(basename "$MutTestConfig") with test parameters
-    -i, --init         the same as "./$ScriptName --init-build; ./$ScriptName --init-test"
+    -i, --init         generate $(basename "$MutBuilderConfig") and $(basename "$MutPubContent")
     -c, --compile      build package(s)
     -b, --brew         compress *.upk and place inside *.u
    -bm, --brew-manual  the same (almost) as above, but with patched kfeditor by @notpeelz
     -u, --upload       upload package(s) to the Steam Workshop
-    -t, --test         run local single player test with $(basename "$MutTestConfig") parameters
+    -t, --test         run local single player test
+    -f, --force        overwrites existing files when used with --init
     -q, --quiet        run without output
     -w, --warnings     do not close kf2editor automatically (to be able to read warnings)
    -nc, --no-colors    do not use color output
@@ -228,14 +240,25 @@ function restore_kfeditorconf ()
 	fi
 }
 
-function init_build ()
+function init ()
 {
 	local PackageList=""
+	local AviableMutators=""
+	local AviableGamemodes=""
+	local ConfigGamemodes=""
+	local ProjectName=""
+	local GitUsername=""
+	local GitRemoteUrl=""
+	local PublicationTags=""
 	
-	msg "creating new build config"
-	
-	:> "$MutBuildConfig"
-	
+	if [[ -e "$MutBuilderConfig" ]]; then
+		if is_true "$ArgForce"; then
+			msg "rewriting $(basename "$MutBuilderConfig")"
+		fi
+	else
+		msg "creating new $(basename "$MutBuilderConfig")"
+	fi
+
 	while read -r Package
 	do
 		if [[ -z "$PackageList" ]]; then
@@ -247,8 +270,43 @@ function init_build ()
 	
 	msg "packages found: $PackageList"
 	
-	cat > "$MutBuildConfig" <<EOF
-# Build parameters 
+	for Package in $PackageList
+	do
+		# find available mutators
+		while read -r MutClass
+		do
+			if [[ -z "$AviableMutators" ]]; then
+				AviableMutators="$Package.$MutClass"
+			else
+				AviableMutators="$AviableMutators,$Package.$MutClass"
+			fi
+		done < <(grep -rihPo '\s.+extends\s(KF)?Mutator' "$MutSource/$Package" | awk '{ print $1 }')
+		
+		# find available gamemodes
+		while read -r GamemodeClass
+		do
+			if [[ -z "$AviableGamemodes" ]]; then
+				AviableGamemodes="$Package.$GamemodeClass"
+			else
+				AviableGamemodes="$AviableGamemodes,$Package.$GamemodeClass"
+			fi
+		done < <(grep -rihPo '\s.+extends\sKFGameInfo_' "$MutSource/$Package" | awk '{ print $1 }')
+	done
+	
+	if [[ -n "$AviableMutators" ]]; then
+		msg "mutators found: $AviableMutators"
+	fi
+	
+	if [[ -z "$AviableGamemodes" ]]; then
+		ConfigGamemodes="KFGameContent.KFGameInfo_Survival"
+	else
+		ConfigGamemodes="$AviableGamemodes"
+		msg "custom gamemodes found: $AviableGamemodes"
+	fi
+	
+	if is_true "$ArgForce" || ! [[ -e "$MutBuilderConfig" ]]; then
+		cat > "$MutBuilderConfig" <<EOF
+### Build parameters ###
 
 # If True - compresses the mutator when compiling
 # Scripts will be stored in binary form
@@ -260,37 +318,126 @@ StripSource="True"
 # Mutators will be compiled in the specified order 
 PackageBuildOrder="$PackageList"
 
+
+### Steam Workshop upload parameters ###
+
 # Mutators that will be uploaded to the workshop
 # Specify them with a space as a separator,
 # The order doesn't matter 
 PackageUpload="$PackageList"
+
+
+### Test parameters ###
+
+# Map:
+Map="KF-Nuked"
+
+# Game:
+# Survival:       KFGameContent.KFGameInfo_Survival
+# WeeklyOutbreak: KFGameContent.KFGameInfo_WeeklySurvival
+# Endless:        KFGameContent.KFGameInfo_Endless
+# Objective:      KFGameContent.KFGameInfo_Objective
+# Versus:         KFGameContent.KFGameInfo_VersusSurvival
+Game="$ConfigGamemodes"
+
+# Difficulty:
+# Normal:         0
+# Hard:           1
+# Suicide:        2
+# Hell:           3
+Difficulty="0"
+
+# GameLength:
+# 4  waves:       0
+# 7  waves:       1
+# 10 waves:       2
+GameLength="0"
+
+# Mutators
+Mutators="$AviableMutators"
+
+# Additional parameters
+Args=""
 EOF
-
-	msg "${GRN}$(basename "$MutBuildConfig") created${DEF}"
-}
-
-function read_build_settings ()
-{
-	if ! [[ -f "$MutBuildConfig" ]]; then init_build; fi
+		msg "${GRN}$(basename "$MutBuilderConfig") created${DEF}"
+	fi
 	
-	if bash -n "$MutBuildConfig"; then
-		# shellcheck source=./.shellcheck/build.cfg
-		source "$MutBuildConfig"
-	else
-		die "$MutBuildConfig broken! Check this file before continue or create new one using --init-build option" 2
+	if ! [[ -d "$MutPubContent" ]]; then mkdir -p "$MutPubContent"; fi
+	
+	ProjectName=$(basename "$(readlink -e "$MutSource")")
+	
+	if is_true "$ArgForce" || ! [[ -e "$MutPubContentTitle" ]]; then
+		echo "$ProjectName" > "$MutPubContentTitle"
+		msg "${GRN}$(basename "$MutPubContentTitle") created${DEF}"
+	fi
+	
+	if is_true "$ArgForce" || ! [[ -e "$MutPubContentDescription" ]]; then
+		:> "$MutPubContentDescription"
+		echo "[h1]${ProjectName}[/h1]" >> "$MutPubContentDescription"
+		echo "" >> "$MutPubContentDescription"
+		if [[ -n "$AviableGamemodes" ]] || [[ -n "$AviableMutators" ]]; then
+			echo "[h1]Description[/h1]" >> "$MutPubContentDescription"
+			if [[ -n "$AviableGamemodes" ]]; then
+				echo "[b]Gamemode(s):[/b] $AviableGamemodes" >> "$MutPubContentDescription"
+			fi
+			if [[ -n "$AviableMutators" ]]; then
+				echo "[b]Mutator(s):[/b] $AviableMutators" >> "$MutPubContentDescription"
+			fi
+			echo "" >> "$MutPubContentDescription"
+		fi
+		
+		GitRemoteUrl=$(repo_url "$(git config --get remote.origin.url)")
+		if [[ -n "$GitRemoteUrl" ]]; then
+		{
+			echo "[h1]Sources[/h1]"
+			echo "[url=${GitRemoteUrl}]${GitRemoteUrl}[/url]"
+			echo ""
+		} >> "$MutPubContentDescription"
+		fi
+		
+		GitUsername=$(git config --get user.name)
+		if [[ -n "$GitUsername" ]]; then
+		{
+			echo "[h1]Author[/h1]"
+			echo "[url=https://github.com/${GitUsername}]${GitUsername}[/url]"
+			echo ""
+		} >> "$MutPubContentDescription"
+		fi
+		
+		msg "${GRN}$(basename "$MutPubContentDescription") created${DEF}"
+	fi
+	
+	if is_true "$ArgForce" || ! [[ -e "$MutPubContentPreview" ]]; then
+		cp -f "$DummyPreview" "$MutPubContentPreview"
+		msg "${GRN}$(basename "$MutPubContentPreview") created${DEF}"
+	fi
+	
+	if is_true "$ArgForce" || ! [[ -e "$MutPubContentTags" ]]; then
+		:> "$MutPubContentTags"
+		if [[ -n "$AviableGamemodes" ]]; then
+			PublicationTags="Gamemodes"
+		fi
+		if [[ -n "$AviableMutators" ]]; then
+			if [[ -n "$PublicationTags" ]]; then
+				PublicationTags="$PublicationTags,Mutators"
+			else
+				PublicationTags="Mutators"
+			fi
+			echo "$PublicationTags" >> "$MutPubContentTags"
+		fi
+		msg "${GRN}$(basename "$MutPubContentTags") created${DEF}"
 	fi
 }
 
-function read_test_settings ()
+function read_settings ()
 {
-	if ! [[ -f "$MutTestConfig" ]]; then init_test;	fi
+	if ! [[ -f "$MutBuilderConfig" ]]; then init; fi
 	
-	if bash -n "$MutTestConfig"; then
-		# shellcheck source=./.shellcheck/test.cfg
-		source "$MutTestConfig"
+	if bash -n "$MutBuilderConfig"; then
+		# shellcheck source=./.shellcheck/builder.cfg
+		source "$MutBuilderConfig"
 	else
-		die "$MutTestConfig broken! Check this file before continue or create new one using --init-test option" 2
-		return 1
+		die "$MutBuilderConfig broken! Check this file before continue or create new one using --force --init" 2
 	fi
 }
 
@@ -359,7 +506,7 @@ function compile ()
 	local StripSourceArg=""
 	local PID=""
 	
-	read_build_settings
+	read_settings
 
 	if ! command -v multini &> /dev/null; then
 		get_latest_multini "$ThirdPartyBin/multini.exe"
@@ -464,7 +611,7 @@ function brew ()
 	
 	msg "brewing"
 	
-	read_build_settings
+	read_settings
 	
 	if ! compiled ; then
 		die "You must compile packages before brewing. Use --compile option for this." 2
@@ -505,7 +652,7 @@ function brew_manual ()
 {
 	msg "manual brewing"
 
-	read_build_settings
+	read_settings
 	
 	if ! compiled ; then
 		die "You must compile packages before brewing. Use --compile option for this." 2
@@ -557,7 +704,7 @@ function upload ()
 {
 	local PreparedWsDir=""
 	
-	read_build_settings
+	read_settings
 	
 	if ! compiled ; then
 		die "You must compile packages before uploading. Use --compile option for this." 2
@@ -572,10 +719,10 @@ function upload ()
 	PreparedWsDir=$(mktemp -d -u -p "$KFDoc")
 
 	cat > "$MutWsInfo" <<EOF
-\$Description "$(cat "$MutPubContent/description.txt")"
-\$Title "$(cat "$MutPubContent/title.txt")"
-\$PreviewFile "$(cygpath -w "$MutPubContent/preview.png")"
-\$Tags "$(cat "$MutPubContent/tags.txt")"
+\$Description "$(cat "$MutPubContentDescription")"
+\$Title "$(cat "$MutPubContentTitle")"
+\$PreviewFile "$(cygpath -w "$MutPubContentPreview")"
+\$Tags "$(cat "$MutPubContentTags")"
 \$MicroTxItem "false"
 \$PackageDirectory "$(cygpath -w "$PreparedWsDir")"
 EOF
@@ -594,91 +741,11 @@ EOF
 	rm -f "$MutWsInfo"
 }
 
-function init_test ()
-{
-	local AviableMutators=""
-	local AviableGamemodes=""
-	
-	msg "creating new test config"
-	
-	read_build_settings
-	
-	for Package in $PackageUpload
-	do
-		# find available mutators
-		while read -r MutClass
-		do
-			if [[ -z "$AviableMutators" ]]; then
-				AviableMutators="$Package.$MutClass"
-			else
-				AviableMutators="$AviableMutators,$Package.$MutClass"
-			fi
-		done < <(grep -rihPo '\s.+extends\s(KF)?Mutator' "$MutSource/$Package" | awk '{ print $1 }')
-		
-		# find available gamemodes
-		while read -r GamemodeClass
-		do
-			if [[ -z "$AviableGamemodes" ]]; then
-				AviableGamemodes="$Package.$GamemodeClass"
-			else
-				AviableGamemodes="$AviableGamemodes,$Package.$GamemodeClass"
-			fi
-		done < <(grep -rihPo '\s.+extends\sKFGameInfo_' "$MutSource/$Package" | awk '{ print $1 }')
-	done
-	
-	if [[ -n "$AviableMutators" ]]; then
-		msg "mutators found: $AviableMutators"
-	fi
-	
-	if [[ -z "$AviableGamemodes" ]]; then
-		AviableGamemodes="KFGameContent.KFGameInfo_Survival"
-	else
-		msg "custom gamemodes found: $AviableGamemodes"
-	fi
-	
-	cat > "$MutTestConfig" <<EOF
-# Test parameters 
-
-# Map:
-Map="KF-Nuked"
-
-# Game:
-# Survival:       KFGameContent.KFGameInfo_Survival
-# WeeklyOutbreak: KFGameContent.KFGameInfo_WeeklySurvival
-# Endless:        KFGameContent.KFGameInfo_Endless
-# Objective:      KFGameContent.KFGameInfo_Objective
-# Versus:         KFGameContent.KFGameInfo_VersusSurvival
-Game="$AviableGamemodes"
-
-# Difficulty:
-# Normal:         0
-# Hard:           1
-# Suicide:        2
-# Hell:           3
-Difficulty="0"
-
-# GameLength:
-# 4  waves:       0
-# 7  waves:       1
-# 10 waves:       2
-GameLength="0"
-
-# Mutators
-Mutators="$AviableMutators"
-
-# Additional parameters
-Args=""
-EOF
-
-	msg "${GRN}$(basename "$MutTestConfig") created${DEF}"
-}
-
 function run_test ()
 {
 	local UseUnpublished=""
 	
-	read_build_settings
-	read_test_settings
+	read_settings
 	
 	if ! brewed; then
 		UseUnpublished="-useunpublished"
@@ -700,8 +767,6 @@ function parse_combined_params () # $1: Combined short parameters
 	do
 		if [[ "$Position" -ge "$Length" ]]; then break; fi
 		case "${Param:$Position:2}" in
-			ib ) ((Position+=2)); ArgInitBuild="true"                      ;;
-			it ) ((Position+=2)); ArgInitTest="true"                       ;;
 			bm ) ((Position+=2)); ArgBrewManual="true"                     ;;
 			nc ) ((Position+=2)); ArgNoColors="true"                       ;;
 		esac
@@ -710,7 +775,7 @@ function parse_combined_params () # $1: Combined short parameters
 		case "${Param:$Position:1}" in
 			h  ) ((Position+=1)); ArgHelp="true"                           ;;
 			v  ) ((Position+=1)); ArgVersion="true"                        ;;
-			i  ) ((Position+=1)); ArgInitBuild="true"; ArgInitTest="true"  ;;
+			i  ) ((Position+=1)); ArgInit="true"                           ;;
 			c  ) ((Position+=1)); ArgCompile="true"                        ;;
 			b  ) ((Position+=1)); ArgBrew="true"                           ;;
 			u  ) ((Position+=1)); ArgUpload="true"                         ;;
@@ -718,6 +783,7 @@ function parse_combined_params () # $1: Combined short parameters
 			d  ) ((Position+=1)); ArgDebug="true"                          ;;
 			q  ) ((Position+=1)); ArgQuiet="true"                          ;;
 			w  ) ((Position+=1)); ArgWarnings="true"                       ;;
+			f  ) ((Position+=1)); ArgForce="true"                          ;;
 			*  ) die "Unknown short option: -${Param:$Position:1}" 1       ;;
 		esac
 	done
@@ -730,9 +796,7 @@ function parse_params () # $@: Args
 		case "${1-}" in
 			  -h | --help        ) ArgHelp="true"                          ;;
 			  -v | --version     ) ArgVersion="true"                       ;;
-			 -ib | --init-build  ) ArgInitBuild="true"                     ;;
-			 -it | --init-test   ) ArgInitTest="true"                      ;;
-			  -i | --init        ) ArgInitBuild="true"; ArgInitTest="true" ;;
+			  -i | --init        ) ArgInit="true"                          ;;
 			  -c | --compile     ) ArgCompile="true"                       ;;
 			  -b | --brew        ) ArgBrew="true"                          ;;
 			 -bm | --brew-manual ) ArgBrewManual="true"                    ;;
@@ -742,6 +806,7 @@ function parse_params () # $@: Args
 			  -q | --quiet       ) ArgQuiet="true"                         ;;
 			  -w | --warnings    ) ArgWarnings="true"                      ;;
 			 -nc | --no-color    ) ArgNoColors="true"                      ;;
+			  -f | --force       ) ArgForce="true"                         ;;
 			       --*           ) die "Unknown option: ${1}" 1            ;;
 			  -*                 ) parse_combined_params "${1}"            ;;
 			     *               ) if [[ -n "${1-}" ]]; then die "Unknown option: ${1-}" 1; fi; break ;;
@@ -763,8 +828,7 @@ function main ()
 	# Actions
 	if is_true "$ArgVersion";    then version; die "" 0; fi
 	if is_true "$ArgHelp";       then usage;   die "" 0; fi
-	if is_true "$ArgInitBuild";  then init_build;        fi
-	if is_true "$ArgInitTest";   then init_test;         fi
+	if is_true "$ArgInit";       then init;              fi
 	if is_true "$ArgCompile";    then compile;           fi
 	if is_true "$ArgBrew";       then brew;              fi
 	if is_true "$ArgBrewManual"; then brew_manual;       fi
