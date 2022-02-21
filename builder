@@ -188,11 +188,11 @@ function usage ()
 	HelpMessage=$(cat <<EOF
 ${BLD}Usage:${DEF} $0 OPTIONS
 
-Build, pack, test and upload your kf2 packages to the Steam Workshop.
+Compile, brew, test and upload your kf2 packages to the Steam Workshop.
 
 ${BLD}Available options:${DEF}
     -i, --init         generate $(basename "$MutBuilderConfig") and $(basename "$MutPubContent")
-    -c, --compile      build package(s)
+    -c, --compile      compile package(s)
     -b, --brew         compress *.upk and place inside *.u
    -bm, --brew-manual  the same (almost) as above, but with patched kfeditor by @notpeelz
     -u, --upload       upload package(s) to the Steam Workshop
@@ -826,14 +826,15 @@ function main ()
 	if is_true "$ArgDebug";      then set -o xtrace;	 fi
 	
 	# Actions
-	if is_true "$ArgVersion";    then version; die "" 0; fi
-	if is_true "$ArgHelp";       then usage;   die "" 0; fi
-	if is_true "$ArgInit";       then init;              fi
-	if is_true "$ArgCompile";    then compile;           fi
-	if is_true "$ArgBrew";       then brew;              fi
-	if is_true "$ArgBrewManual"; then brew_manual;       fi
-	if is_true "$ArgUpload";     then upload;            fi
-	if is_true "$ArgTest";       then run_test;          fi
+	if is_true "$ArgVersion" && is_true "$ArgHelp"; then version; usage; die "" 0; fi
+	if is_true "$ArgVersion";                       then version;        die "" 0; fi
+	if is_true "$ArgHelp";                          then usage;          die "" 0; fi
+	if is_true "$ArgInit";                          then init;                     fi
+	if is_true "$ArgCompile";                       then compile;                  fi
+	if is_true "$ArgBrew";                          then brew;                     fi
+	if is_true "$ArgBrewManual";                    then brew_manual;              fi
+	if is_true "$ArgUpload";                        then upload;                   fi
+	if is_true "$ArgTest";                          then run_test;                 fi
 }
 
 main "$@"
