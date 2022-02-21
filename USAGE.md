@@ -5,11 +5,11 @@
 ```
 Usage: ./tools/builder OPTIONS
 
-Build, pack, test and upload your kf2 packages to the Steam Workshop.
+Compile, brew, test and upload your kf2 packages to the Steam Workshop.
 
 Available options:
     -i, --init         generate builder.cfg and PublicationContent
-    -c, --compile      build package(s)
+    -c, --compile      compile package(s)
     -b, --brew         compress *.upk and place inside *.u
    -bm, --brew-manual  the same (almost) as above, but with patched kfeditor by @notpeelz
     -u, --upload       upload package(s) to the Steam Workshop
