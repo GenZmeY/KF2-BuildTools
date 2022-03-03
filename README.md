@@ -87,9 +87,9 @@ builder.cfg
 ```
 
 ## Examples
-[LightTIM](https://github.com/GenZmeY/KF2-LightTIM) - simplest case (one mutator) 
-[ServerExt](https://github.com/GenZmeY/KF2-Server-Extension) - Two mutators are compiled, there are *.upk files and localization 
-[UnofficialMod](https://github.com/GenZmeY/UnofficialMod) - Three mutators are compiled (one of them is a dependency), two mutators are uploaded to the steam workshop
+[LightTIM](https://github.com/GenZmeY/KF2-LightTIM) - simplest case (one mutator)  
+[ServerExt](https://github.com/GenZmeY/KF2-Server-Extension) - Two mutators are compiled, there are *.upk files and localization  
+[UnofficialMod](https://github.com/GenZmeY/UnofficialMod) - Three mutators are compiled (one of them is a dependency), two mutators are uploaded to the steam workshop  
 
 # Other
 [TODO List](TODO.md)
