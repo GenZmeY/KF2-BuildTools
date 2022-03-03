@@ -86,7 +86,7 @@ Change the filesystem of the project to such a form that everything works correc
 builder.cfg
 ```
 
-## Examples
+## Examples (Projects that use KF2-BuildTools)
 [LightTIM](https://github.com/GenZmeY/KF2-LightTIM) - simplest case (one mutator)  
 [ServerExt](https://github.com/GenZmeY/KF2-Server-Extension) - Two mutators are compiled, there are *.upk files and localization  
 [UnofficialMod](https://github.com/GenZmeY/UnofficialMod) - Three mutators are compiled (one of them is a dependency), two mutators are uploaded to the steam workshop  
