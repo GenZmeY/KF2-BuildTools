@@ -14,7 +14,7 @@
 - [git-bash](https://git-scm.com/download/win)
 
 # Add to your project
-Make sure that the location of folders and files in your project is as follows (Correct it if it's not):  
+Make sure that the location of folders and files in your project as follows (Correct it if it's not):  
 `/<PackageName>/Classes/*.uc`
 
 **There are two ways to add KF2-BuildTools to your project:**  
@@ -48,7 +48,7 @@ If you have a simple mutator or game mode, then the usage is also simple: just u
 your steam workshop 🙃  
 
 # Usage (Advanced)
-If your project contains several mutators, *.upk files, external dependencies, or you want to customize the whole process in more detail, then this section is for you. 
+If your project contains several mutators, *.upk files, external dependencies, or you want to customize the whole process in more details, then this section is for you. 
 
 ## Setup
 When you run compilation for the first time or do `./tools/builder --init` `builder.cfg` appears in your project folder.  
