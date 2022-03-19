@@ -562,6 +562,9 @@ function compile ()
 			fi
 			sleep 1
 		done
+		if ! compiled; then
+			die "compilation failed"
+		fi
 	fi
 	
 	find "$KFUnpublish" -type d -empty -delete
@@ -640,6 +643,10 @@ function brew ()
 			fi
 			sleep 1
 		done
+		if ! brewed; then
+			brew_cleanup
+			die "brewing failed"
+		fi
 	fi
 	
 	publish_common
