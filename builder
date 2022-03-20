@@ -57,6 +57,7 @@ KFWorkshop="$KFPath/Binaries/WorkshopUserTool.exe"
 KFUnpublish="$KFDoc/KFGame/Unpublished"
 KFPublish="$KFDoc/KFGame/Published"
 KFEditorConf="$KFDoc/KFGame/Config/KFEditor.ini"
+KFLogs="$KFDoc/KFGame/Logs"
 
 # Source filesystem
 MutSource="$ScriptDir/.."
@@ -512,8 +513,6 @@ function compile ()
 		get_latest_multini "$ThirdPartyBin/multini.exe"
 	fi
 	
-	backup_kfeditorconf
-	
 	multini --del "$KFEditorConf" 'ModPackages' 'ModPackages'
 	for Package in $PackageBuildOrder
 	do
@@ -568,8 +567,6 @@ function compile ()
 	fi
 	
 	find "$KFUnpublish" -type d -empty -delete
-	
-	restore_kfeditorconf
 }
 
 function publish_common ()
@@ -830,18 +827,26 @@ function main ()
 	export PATH="$PATH:$ThirdPartyBin"
 	
 	# Modifiers
-	if is_true "$ArgDebug";      then set -o xtrace;	 fi
+	if is_true "$ArgDebug"; then set -o xtrace; fi
 	
-	# Actions
+	# Help
 	if is_true "$ArgVersion" && is_true "$ArgHelp"; then version; usage; die "" 0; fi
 	if is_true "$ArgVersion";                       then version;        die "" 0; fi
 	if is_true "$ArgHelp";                          then usage;          die "" 0; fi
+	
+	# Backup
+	if is_true "$ArgCompile" || is_true "$ArgBrew"; then backup_kfeditorconf; fi
+	
+	# Actions
 	if is_true "$ArgInit";                          then init;                     fi
 	if is_true "$ArgCompile";                       then compile;                  fi
 	if is_true "$ArgBrew";                          then brew;                     fi
 	if is_true "$ArgBrewManual";                    then brew_manual;              fi
 	if is_true "$ArgUpload";                        then upload;                   fi
 	if is_true "$ArgTest";                          then run_test;                 fi
+	
+	# Restore
+	if is_true "$ArgCompile" || is_true "$ArgBrew"; then restore_kfeditorconf; fi
 }
 
 main "$@"
