@@ -98,7 +98,7 @@ ArgVersion="false"
 ArgHelp="false"
 ArgDebug="false"
 ArgQuiet="false"
-ArgWarnings="false"
+ArgHoldEditor="false"
 ArgNoColors="false"
 ArgForce="false"
 
@@ -201,7 +201,7 @@ ${BLD}Available options:${DEF}
     -t, --test         run local single player test
     -f, --force        overwrites existing files when used with --init
     -q, --quiet        run without output
-    -w, --warnings     do not close kf2editor automatically (to be able to read warnings)
+   -he, --hold-editor  do not close kf2editor automatically
    -nc, --no-colors    do not use color output
     -d, --debug        print every executed command (script debug)
     -v, --version      show version
@@ -451,7 +451,7 @@ function merge_package () # $1: What, $2: Where
 	
 	msg "merge $1 into $2"
 	
-	if is_true "$ArgWarnings"; then
+	if is_true "$ArgHoldEditor"; then
 		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditorMergePackages") make $1 $2"
 	else
 		ModificationTime=$(stat -c %y "$KFWin64/$2")
@@ -588,7 +588,7 @@ function compile ()
 	
 	msg "compilation"
 	
-	if is_true "$ArgWarnings"; then
+	if is_true "$ArgHoldEditor"; then
 		CMD //C "$(cygpath -w "$KFEditor") make $StripSourceArg -useunpublished"
 		Logfile=$(find "$KFLogs" -printf '%T+ %p\n' | sort -r | head -n1 | cut -f2- -d" ")
 		parse_log "$Logfile"
@@ -677,7 +677,7 @@ function brew ()
 	
 	mkdir -p "$KFPublishBrewedPC"
 	
-	if is_true "$ArgWarnings"; then
+	if is_true "$ArgHoldEditor"; then
 		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditor") brewcontent -platform=PC $PackageUpload -useunpublished"
 		if ! brewed; then
 			brew_cleanup
@@ -828,6 +828,7 @@ function parse_combined_params () # $1: Combined short parameters
 		if [[ "$Position" -ge "$Length" ]]; then break; fi
 		case "${Param:$Position:2}" in
 			bm ) ((Position+=2)); ArgBrewManual="true"                     ;;
+			he ) ((Position+=2)); ArgHoldEditor="true"                     ;;
 			nc ) ((Position+=2)); ArgNoColors="true"                       ;;
 		esac
 		
@@ -842,7 +843,6 @@ function parse_combined_params () # $1: Combined short parameters
 			t  ) ((Position+=1)); ArgTest="true"                           ;;
 			d  ) ((Position+=1)); ArgDebug="true"                          ;;
 			q  ) ((Position+=1)); ArgQuiet="true"                          ;;
-			w  ) ((Position+=1)); ArgWarnings="true"                       ;;
 			f  ) ((Position+=1)); ArgForce="true"                          ;;
 			*  ) die "Unknown short option: -${Param:$Position:1}" 1       ;;
 		esac
@@ -864,7 +864,7 @@ function parse_params () # $@: Args
 			  -t | --test        ) ArgTest="true"                          ;;
 			  -d | --debug       ) ArgDebug="true"                         ;;
 			  -q | --quiet       ) ArgQuiet="true"                         ;;
-			  -w | --warnings    ) ArgWarnings="true"                      ;;
+			 -he | --hold-editor ) ArgHoldEditor="true"                    ;;
 			 -nc | --no-color    ) ArgNoColors="true"                      ;;
 			  -f | --force       ) ArgForce="true"                         ;;
 			       --*           ) die "Unknown option: ${1}" 1            ;;
