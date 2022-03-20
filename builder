@@ -35,19 +35,20 @@ function reg_readkey () # $1: path, $2: key
 }
 
 # Whoami
-ScriptFullname=$(readlink -e "$0")
-ScriptName=$(basename "$0")
-ScriptDir=$(dirname "$ScriptFullname")
+ScriptFullname="$(readlink -e "$0")"
+ScriptName="$(basename "$0")"
+ScriptDir="$(dirname "$ScriptFullname")"
 
 # Common
-SteamPath=$(reg_readkey "HKCU\Software\Valve\Steam" "SteamPath")
-DocumentsPath=$(reg_readkey "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" "Personal")
+SteamPath="$(reg_readkey "HKCU\Software\Valve\Steam" "SteamPath")"
+DocumentsPath="$(reg_readkey "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" "Personal")"
 ThirdPartyBin="$ScriptDir/3rd-party-bin"
 DummyPreview="$ScriptDir/dummy_preview.png"
 
 # Usefull KF2 executables / Paths / Configs
 KFDoc="$DocumentsPath/My Games/KillingFloor2"
 KFPath="$SteamPath/steamapps/common/killingfloor2"
+KFDev="$KFPath/Development/Src"
 KFWin64="$KFPath/Binaries/Win64"
 KFEditor="$KFWin64/KFEditor.exe"
 KFEditorPatcher="$KFWin64/kfeditor_patcher.exe"
@@ -60,7 +61,7 @@ KFEditorConf="$KFDoc/KFGame/Config/KFEditor.ini"
 KFLogs="$KFDoc/KFGame/Logs"
 
 # Source filesystem
-MutSource="$ScriptDir/.."
+MutSource="$(readlink -e "$ScriptDir/..")"
 MutConfig="$MutSource/Config"
 MutLocalization="$MutSource/Localization"
 MutBuilderConfig="$MutSource/builder.cfg"
@@ -492,6 +493,49 @@ function merge_packages () # $1: Mutator name
 	done < <(find "$MutSource/$1" -type f -name '*.upk' -printf "%f\n")
 }
 
+function parse_log () # $1: Logfile
+{
+	local File=''
+	local FileUnix=''
+	local FileCompact=''
+	local Line=''
+	local Message=''
+
+	local IR=1
+	if grep -qP ' Error:.+: Error, ' "$1"; then # check to prevent a very strange crash 
+		grep -P ' Error:.+: Error, ' "$1" | \
+		while read -r Error
+		do
+			if [[ -z "$Error" ]]; then break; fi
+			File="$(echo "$Error" | sed -r 's|^.+Error: (.+)\([0-9]+\) : Error,.+$|\1|')"
+			FileUnix="$(cygpath -u "$File")"
+			FileCompact="$(echo "$FileUnix" | sed -r "s|^$KFDev(.+)$|\1|")"
+			Line="$(echo "$Error" | sed -r 's|^.+Error: .+\(([0-9]+)\) : Error,.+$|\1|')"
+			Message="$(echo "$Error" | sed -r 's|^.+Error: .+\([0-9]+\) : Error, (.+)$|\1|')"
+				
+			msg "${RED}[$IR] $FileCompact($Line): $Message"
+			((IR+=1))
+		done
+	fi
+	
+	local IW=1
+	if grep -qP ' Warning:.+: Warning, ' "$1"; then # and here too
+		grep -P ' Warning:.+: Warning, ' "$1" | \
+		while read -r Warning
+		do
+			if [[ -z "$Warning" ]]; then break; fi
+			File="$(echo "$Warning" | sed -r 's|^.+Warning: (.+)\([0-9]+\) : Warning,.+$|\1|')"
+			FileUnix="$(cygpath -u "$File")"
+			FileCompact="$(echo "$FileUnix" | sed -r "s|^$KFDev(.+)$|\1|")"
+			Line="$(echo "$Warning" | sed -r 's|^.+Warning: .+\(([0-9]+)\) : Warning,.+$|\1|')"
+			Message="$(echo "$Warning" | sed -r 's|^.+Warning: .+\([0-9]+\) : Warning, (.+)$|\1|')"
+				
+			msg "${YLW}[$IW] $FileCompact($Line): $Message"
+			((IW+=1))
+		done
+	fi
+}
+
 function compiled ()
 {
 	for Package in $PackageBuildOrder
@@ -506,6 +550,7 @@ function compile ()
 {
 	local StripSourceArg=""
 	local PID=""
+	local Logfile=""
 	
 	read_settings
 
@@ -545,6 +590,8 @@ function compile ()
 	
 	if is_true "$ArgWarnings"; then
 		CMD //C "$(cygpath -w "$KFEditor") make $StripSourceArg -useunpublished"
+		Logfile=$(find "$KFLogs" -printf '%T+ %p\n' | sort -r | head -n1 | cut -f2- -d" ")
+		parse_log "$Logfile"
 		if ! compiled; then
 			die "compilation failed"
 		fi
@@ -554,16 +601,25 @@ function compile ()
 		PID="$!"
 		while ps -p "$PID" &> /dev/null
 		do
-			if compiled; then
-				kill "$PID"
-				msg "${GRN}successfully compiled${DEF}"
-				break
-			fi
 			sleep 1
+			Logfile=$(find "$KFLogs" -printf '%T+ %p\n' | sort -r | head -n1 | cut -f2- -d" ")
+			if compiled; then
+				msg "${GRN}successfully compiled${DEF}"
+				
+				msg "wait for the log"
+				while ! grep -qF 'Log file closed' "$Logfile"
+				do
+					sleep 1
+				done
+				kill "$PID"
+				parse_log "$Logfile"
+				break
+			elif grep -qF 'Log file closed' "$Logfile"; then
+				kill "$PID"
+				parse_log "$Logfile"
+				die "compilation failed"
+			fi
 		done
-		if ! compiled; then
-			die "compilation failed"
-		fi
 	fi
 	
 	find "$KFUnpublish" -type d -empty -delete
