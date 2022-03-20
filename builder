@@ -119,7 +119,7 @@ function get_latest () # $1: Reponame, $2: filename, $3: output filename
 {
 	local ApiUrl="https://api.github.com/repos/$1/releases/latest"
 	local LatestTag=""
-	LatestTag=$(curl --silent "$ApiUrl" | grep -Po '"tag_name": "\K.*?(?=")')
+	LatestTag="$(curl --silent "$ApiUrl" | grep -Po '"tag_name": "\K.*?(?=")')"
 	local DownloadUrl="https://github.com/$1/releases/download/$LatestTag/$2"
 	
 	msg "download $2 ($LatestTag)"
@@ -187,7 +187,7 @@ function usage ()
 {
 	local HelpMessage=""
 	
-	HelpMessage=$(cat <<EOF
+	HelpMessage="$(cat <<EOF
 ${BLD}Usage:${DEF} $0 OPTIONS
 
 Compile, brew, test and upload your kf2 packages to the Steam Workshop.
@@ -213,7 +213,7 @@ ${BLD}Short options can be combined, examples:${DEF}
   -wcb                 compile and brew without closing kf2editor
                        etc...
 EOF
-)
+)"
 	msg "$HelpMessage"
 }
 
@@ -366,7 +366,7 @@ EOF
 	
 	if ! [[ -d "$MutPubContent" ]]; then mkdir -p "$MutPubContent"; fi
 	
-	ProjectName=$(basename "$(readlink -e "$MutSource")")
+	ProjectName="$(basename "$(readlink -e "$MutSource")")"
 	
 	if is_true "$ArgForce" || ! [[ -e "$MutPubContentTitle" ]]; then
 		echo "$ProjectName" > "$MutPubContentTitle"
@@ -388,7 +388,7 @@ EOF
 			echo "" >> "$MutPubContentDescription"
 		fi
 		
-		GitRemoteUrl=$(repo_url "$(git config --get remote.origin.url)")
+		GitRemoteUrl="$(repo_url "$(git config --get remote.origin.url)")"
 		if [[ -n "$GitRemoteUrl" ]]; then
 		{
 			echo "[h1]Sources[/h1]"
@@ -397,7 +397,7 @@ EOF
 		} >> "$MutPubContentDescription"
 		fi
 		
-		GitUsername=$(git config --get user.name)
+		GitUsername="$(git config --get user.name)"
 		if [[ -n "$GitUsername" ]]; then
 		{
 			echo "[h1]Author[/h1]"
@@ -454,7 +454,7 @@ function merge_package () # $1: What, $2: Where
 	if is_true "$ArgHoldEditor"; then
 		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditorMergePackages") make $1 $2"
 	else
-		ModificationTime=$(stat -c %y "$KFWin64/$2")
+		ModificationTime="$(stat -c %y "$KFWin64/$2")"
 		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditorMergePackages") make $1 $2" &
 		PID="$!"
 		while ps -p "$PID" &> /dev/null
@@ -590,7 +590,7 @@ function compile ()
 	
 	if is_true "$ArgHoldEditor"; then
 		CMD //C "$(cygpath -w "$KFEditor") make $StripSourceArg -useunpublished"
-		Logfile=$(find "$KFLogs" -printf '%T+ %p\n' | sort -r | head -n1 | cut -f2- -d" ")
+		Logfile="$(find "$KFLogs" -printf '%T+ %p\n' | sort -r | head -n1 | cut -f2- -d" ")"
 		parse_log "$Logfile"
 		if ! compiled; then
 			die "compilation failed"
@@ -602,7 +602,7 @@ function compile ()
 		while ps -p "$PID" &> /dev/null
 		do
 			sleep 1
-			Logfile=$(find "$KFLogs" -printf '%T+ %p\n' | sort -r | head -n1 | cut -f2- -d" ")
+			Logfile="$(find "$KFLogs" -printf '%T+ %p\n' | sort -r | head -n1 | cut -f2- -d" ")"
 			if compiled; then
 				msg "${GRN}successfully compiled${DEF}"
 				
@@ -776,7 +776,7 @@ function upload ()
 	
 	find "$KFPublish" -type d -empty -delete
 	
-	PreparedWsDir=$(mktemp -d -u -p "$KFDoc")
+	PreparedWsDir="$(mktemp -d -u -p "$KFDoc")"
 
 	cat > "$MutWsInfo" <<EOF
 \$Description "$(cat "$MutPubContentDescription")"
