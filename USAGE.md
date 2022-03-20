@@ -16,7 +16,7 @@ Available options:
     -t, --test         run local single player test
     -f, --force        overwrites existing files when used with --init
     -q, --quiet        run without output
-    -w, --warnings     do not close kf2editor automatically (to be able to read warnings)
+   -he, --hold-editor  do not close kf2editor automatically
    -nc, --no-colors    do not use color output
     -d, --debug        print every executed command (script debug)
     -v, --version      show version
