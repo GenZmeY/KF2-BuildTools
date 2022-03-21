@@ -210,7 +210,7 @@ ${BLD}Available options:${DEF}
 ${BLD}Short options can be combined, examples:${DEF}
   -cbu                 compile, brew, upload
  -cbmt                 compile, brew_manual, run_test
-  -wcb                 compile and brew without closing kf2editor
+ -cbhe                 compile and brew without closing kf2editor
                        etc...
 EOF
 )"
