@@ -270,6 +270,10 @@ function init ()
 		fi
 	done < <(find "$MutSource" -mindepth 2 -maxdepth 2 -type d -ipath '*/Classes' | sed -r 's|.+/([^/]+)/[^/]+|\1|' | sort)
 	
+	if [[ -z "$PackageList" ]]; then
+		die "No packages found! Check project filesystem, fix config and try again"
+	fi
+	
 	msg "packages found: $PackageList"
 	
 	for Package in $PackageList
@@ -501,38 +505,42 @@ function parse_log () # $1: Logfile
 	local Line=''
 	local Message=''
 
-	local IR=1
-	if grep -qP ' Error:.+: Error, ' "$1"; then # check to prevent a very strange crash 
-		grep -P ' Error:.+: Error, ' "$1" | \
+	local I=1
+	if grep -qP ' Error:(.+:)? Error, ' "$1"; then # check to prevent a very strange crash 
 		while read -r Error
 		do
 			if [[ -z "$Error" ]]; then break; fi
-			File="$(echo "$Error" | sed -r 's|^.+Error: (.+)\([0-9]+\) : Error,.+$|\1|')"
-			FileUnix="$(cygpath -u "$File")"
-			FileCompact="$(echo "$FileUnix" | sed -r "s|^$KFDev(.+)$|\1|")"
-			Line="$(echo "$Error" | sed -r 's|^.+Error: .+\(([0-9]+)\) : Error,.+$|\1|')"
-			Message="$(echo "$Error" | sed -r 's|^.+Error: .+\([0-9]+\) : Error, (.+)$|\1|')"
-				
-			msg "${RED}[$IR] $FileCompact($Line): $Message"
-			((IR+=1))
-		done
+			Message="$(echo "$Error" | sed -r 's|^.+Error:.+Error, (.+)$|\1|')"
+			File="$(echo "$Error" | sed -r 's|^.+Error: ((.+)\(([0-9]+)\) : )?Error,(.+)$|\2|')"
+			if [[ -n "$File" ]]; then
+				FileUnix="$(cygpath -u "$File")"
+				FileCompact="$(echo "$FileUnix" | sed -r "s|^$KFDev(.+)$|\1|")"
+				Line="$(echo "$Error" | sed -r 's|^.+Error: ((.+)\(([0-9]+)\) : )?Error,(.+)$|\3|')"
+				msg "${RED}[$I] $FileCompact($Line): $Message"
+			else
+				msg "${RED}[$I] $Message"
+			fi
+			((I+=1))
+		done < <(grep -P ' Error:(.+:)? Error, ' "$1")
 	fi
 	
-	local IW=1
-	if grep -qP ' Warning:.+: Warning, ' "$1"; then # and here too
-		grep -P ' Warning:.+: Warning, ' "$1" | \
+	if grep -qP ' Warning:(.+:)? Warning, ' "$1"; then # and here too
 		while read -r Warning
 		do
 			if [[ -z "$Warning" ]]; then break; fi
-			File="$(echo "$Warning" | sed -r 's|^.+Warning: (.+)\([0-9]+\) : Warning,.+$|\1|')"
-			FileUnix="$(cygpath -u "$File")"
-			FileCompact="$(echo "$FileUnix" | sed -r "s|^$KFDev(.+)$|\1|")"
-			Line="$(echo "$Warning" | sed -r 's|^.+Warning: .+\(([0-9]+)\) : Warning,.+$|\1|')"
-			Message="$(echo "$Warning" | sed -r 's|^.+Warning: .+\([0-9]+\) : Warning, (.+)$|\1|')"
-				
-			msg "${YLW}[$IW] $FileCompact($Line): $Message"
-			((IW+=1))
-		done
+			Message="$(echo "$Warning" | sed -r 's|^.+Warning:.+Warning, (.+)$|\1|')"
+			if echo "$Message" | grep -qF 'Unknown language extension . Defaulting to INT'; then continue; fi
+			File="$(echo "$Warning" | sed -r 's|^.+Warning: ((.+)\(([0-9]+)\) : )?Warning,(.+)$|\2|')"
+			if [[ -n "$File" ]]; then
+				FileUnix="$(cygpath -u "$File")"
+				FileCompact="$(echo "$FileUnix" | sed -r "s|^$KFDev(.+)$|\1|")"
+				Line="$(echo "$Warning" | sed -r 's|^.+Warning: ((.+)\(([0-9]+)\) : )?Warning,(.+)$|\3|')"
+				msg "${YLW}[$I] $FileCompact($Line): $Message"
+			else
+				msg "${YLW}[$I] $Message"
+			fi
+			((I+=1))
+		done < <(grep -P ' Warning:(.+:)? Warning, ' "$1")
 	fi
 }
 
@@ -556,6 +564,10 @@ function compile ()
 
 	if ! command -v multini &> /dev/null; then
 		get_latest_multini "$ThirdPartyBin/multini.exe"
+	fi
+	
+	if [[ -z "$PackageBuildOrder" ]]; then
+		die "No packages found! Check project filesystem, fix config and try again"
 	fi
 	
 	multini --del "$KFEditorConf" 'ModPackages' 'ModPackages'
