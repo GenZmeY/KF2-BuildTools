@@ -554,6 +554,11 @@ function compiled ()
 	done
 }
 
+function find_log ()
+{
+	find "$KFLogs" -printf '%T+ %p\n' | sort -r | head -n1 | cut -f2- -d" "
+}
+
 function compile ()
 {
 	local StripSourceArg=""
@@ -602,8 +607,7 @@ function compile ()
 	
 	if is_true "$ArgHoldEditor"; then
 		CMD //C "$(cygpath -w "$KFEditor") make $StripSourceArg -useunpublished"
-		Logfile="$(find "$KFLogs" -printf '%T+ %p\n' | sort -r | head -n1 | cut -f2- -d" ")"
-		parse_log "$Logfile"
+		parse_log "$(find_log)"
 		if ! compiled; then
 			die "compilation failed"
 		fi
@@ -614,7 +618,7 @@ function compile ()
 		while ps -p "$PID" &> /dev/null
 		do
 			sleep 1
-			Logfile="$(find "$KFLogs" -printf '%T+ %p\n' | sort -r | head -n1 | cut -f2- -d" ")"
+			Logfile="$(find_log)"
 			if compiled; then
 				msg "${GRN}successfully compiled${DEF}"
 				
@@ -819,11 +823,11 @@ function run_test ()
 	
 	read_settings
 	
-	if ! brewed; then
+	if brewed; then
+		msg "run test (brewed)"
+	else
 		UseUnpublished="-useunpublished"
 		msg "run test (unpublished)"
-	else
-		msg "run test (brewed)"
 	fi
 	
 	CMD //C "$(cygpath -w "$KFGame") $Map?Difficulty=$Difficulty?GameLength=$GameLength?Game=$Game?Mutator=$Mutators?$Args $UseUnpublished" -log
@@ -895,7 +899,7 @@ function main ()
 	export PATH="$PATH:$ThirdPartyBin"
 	
 	# Modifiers
-	if is_true "$ArgDebug"; then set -o xtrace; fi
+	if is_true "$ArgDebug";                         then set -o xtrace;            fi
 	
 	# Help
 	if is_true "$ArgVersion" && is_true "$ArgHelp"; then version; usage; die "" 0; fi
@@ -903,7 +907,7 @@ function main ()
 	if is_true "$ArgHelp";                          then usage;          die "" 0; fi
 	
 	# Backup
-	if is_true "$ArgCompile" || is_true "$ArgBrew"; then backup_kfeditorconf; fi
+	if is_true "$ArgCompile" || is_true "$ArgBrew"; then backup_kfeditorconf;      fi
 	
 	# Actions
 	if is_true "$ArgInit";                          then init;                     fi
@@ -914,7 +918,7 @@ function main ()
 	if is_true "$ArgTest";                          then run_test;                 fi
 	
 	# Restore
-	if is_true "$ArgCompile" || is_true "$ArgBrew"; then restore_kfeditorconf; fi
+	if is_true "$ArgCompile" || is_true "$ArgBrew"; then restore_kfeditorconf;     fi
 }
 
 main "$@"
