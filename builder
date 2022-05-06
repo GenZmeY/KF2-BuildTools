@@ -556,7 +556,7 @@ function compiled ()
 
 function find_log ()
 {
-	find "$KFLogs" -printf '%T+ %p\n' | sort -r | head -n1 | cut -f2- -d" "
+	find "$KFLogs" -type f -printf '%T+ %p\n' | sort -r | head -n1 | cut -f2- -d" "
 }
 
 function compile ()
