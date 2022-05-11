@@ -69,6 +69,7 @@ MutPubContent="$MutSource/PublicationContent"
 MutPubContentDescription="$MutPubContent/description.txt"
 MutPubContentTitle="$MutPubContent/title.txt"
 MutPubContentPreview="$MutPubContent/preview.png"
+MutPubContentPreviewGif="$MutPubContent/preview.gif"
 MutPubContentTags="$MutPubContent/tags.txt"
 
 # Steam workshop upload filesystem
@@ -779,6 +780,7 @@ function publish_unpublished ()
 function upload ()
 {
 	local PreparedWsDir=""
+	local PubContentPreview=""
 	
 	read_settings
 	
@@ -792,12 +794,17 @@ function upload ()
 	
 	find "$KFPublish" -type d -empty -delete
 	
+	if [[ -e "$MutPubContentPreviewGif" ]]; then
+		PubContentPreview="$MutPubContentPreviewGif"
+	else
+		PubContentPreview="$MutPubContentPreview"
+	
 	PreparedWsDir="$(mktemp -d -u -p "$KFDoc")"
 
 	cat > "$MutWsInfo" <<EOF
 \$Description "$(cat "$MutPubContentDescription")"
 \$Title "$(cat "$MutPubContentTitle")"
-\$PreviewFile "$(cygpath -w "$MutPubContentPreview")"
+\$PreviewFile "$(cygpath -w "$PubContentPreview")"
 \$Tags "$(cat "$MutPubContentTags")"
 \$MicroTxItem "false"
 \$PackageDirectory "$(cygpath -w "$PreparedWsDir")"
