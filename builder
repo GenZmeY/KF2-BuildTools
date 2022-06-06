@@ -68,7 +68,7 @@ MutBuilderConfig="$MutSource/builder.cfg"
 MutPubContent="$MutSource/PublicationContent"
 MutPubContentDescription="$MutPubContent/description.txt"
 MutPubContentTitle="$MutPubContent/title.txt"
-MutPubContentPreview="$MutPubContent/preview.png"
+MutPubContentPreview="$MutPubContent/preview"
 MutPubContentTags="$MutPubContent/tags.txt"
 
 # Steam workshop upload filesystem
@@ -109,6 +109,9 @@ YLW=''
 BLU=''
 DEF=''
 BLD=''
+
+# PNG
+DummyPreviewRaw='\x89\x50\x4e\x47\x0d\x0a\x1a\x0a\x00\x00\x00\x0d\x49\x48\x44\x52\x00\x00\x00\x20\x00\x00\x00\x20\x01\x03\x00\x00\x00\x49\xb4\xe8\xb7\x00\x00\x00\x01\x73\x52\x47\x42\x00\xae\xce\x1c\xe9\x00\x00\x00\x04\x67\x41\x4d\x41\x00\x00\xb1\x8f\x0b\xfc\x61\x05\x00\x00\x00\x06\x50\x4c\x54\x45\x00\x00\x00\xff\xff\xff\xa5\xd9\x9f\xdd\x00\x00\x00\x09\x70\x48\x59\x73\x00\x00\x0e\xc4\x00\x00\x0e\xc4\x01\x95\x2b\x0e\x1b\x00\x00\x00\x14\x49\x44\x41\x54\x18\xd3\x63\x60\x60\xf8\xff\x9f\x9a\x04\x55\x4d\x63\x60\x00\x00\xed\xbd\x3f\xc1\xbb\x2a\xd9\x62\x00\x00\x00\x00\x49\x45\x4e\x44\xae\x42\x60\x82'
 
 function is_true () # $1: Bool arg to check
 {
@@ -181,6 +184,11 @@ function die () # $1: String, $2: Exit code
 {
 	err  "${1-}"
 	exit "${2-3}"
+}
+
+function warn () # $1: String
+{
+	msg "${YLW}${1-}"
 }
 
 function usage ()
@@ -413,9 +421,13 @@ EOF
 		msg "${GRN}$(basename "$MutPubContentDescription") created${DEF}"
 	fi
 	
-	if is_true "$ArgForce" || ! [[ -e "$MutPubContentPreview" ]]; then
-		cp -f "$DummyPreview" "$MutPubContentPreview"
-		msg "${GRN}$(basename "$MutPubContentPreview") created${DEF}"
+	if is_true "$ArgForce" || [[ "$(preview_extension)" == "None" ]]; then
+		if [[ -e "$DummyPreview" ]]; then
+			cp -f "$DummyPreview" "${MutPubContentPreview}.png"
+		else
+			printf '%b' "$DummyPreviewRaw" > "${MutPubContentPreview}.png"
+		fi
+		msg "${GRN}$(basename "${MutPubContentPreview}.png") created${DEF}"
 	fi
 	
 	if is_true "$ArgForce" || ! [[ -e "$MutPubContentTags" ]]; then
@@ -433,6 +445,19 @@ EOF
 		fi
 		msg "${GRN}$(basename "$MutPubContentTags") created${DEF}"
 	fi
+}
+
+function preview_extension ()
+{
+	for Ext in gif png jpg jpeg
+	do
+		if [[ -e "${MutPubContentPreview}.${Ext}" ]]; then
+			echo "$Ext"
+			return 0
+		fi
+	done
+	
+	echo "None"
 }
 
 function read_settings ()
@@ -516,9 +541,9 @@ function parse_log () # $1: Logfile
 				FileUnix="$(cygpath -u "$File")"
 				FileCompact="$(echo "$FileUnix" | sed -r "s|^$KFDev(.+)$|\1|")"
 				Line="$(echo "$Error" | sed -r 's|^.+Error: ((.+)\(([0-9]+)\) : )?Error,(.+)$|\3|')"
-				msg "${RED}[$I] $FileCompact($Line): $Message"
+				err "[$I] $FileCompact($Line): $Message"
 			else
-				msg "${RED}[$I] $Message"
+				err "[$I] $Message"
 			fi
 			((I+=1))
 		done < <(grep -P ' Error:(.+:)? Error, ' "$1")
@@ -535,9 +560,9 @@ function parse_log () # $1: Logfile
 				FileUnix="$(cygpath -u "$File")"
 				FileCompact="$(echo "$FileUnix" | sed -r "s|^$KFDev(.+)$|\1|")"
 				Line="$(echo "$Warning" | sed -r 's|^.+Warning: ((.+)\(([0-9]+)\) : )?Warning,(.+)$|\3|')"
-				msg "${YLW}[$I] $FileCompact($Line): $Message"
+				warn "[$I] $FileCompact($Line): $Message"
 			else
-				msg "${YLW}[$I] $Message"
+				warn "[$I] $Message"
 			fi
 			((I+=1))
 		done < <(grep -P ' Warning:(.+:)? Warning, ' "$1")
@@ -685,7 +710,7 @@ function brew ()
 	
 	read_settings
 	
-	if ! compiled ; then
+	if ! compiled; then
 		die "You must compile packages before brewing. Use --compile option for this." 2
 	fi
 	
@@ -730,7 +755,7 @@ function brew_manual ()
 
 	read_settings
 	
-	if ! compiled ; then
+	if ! compiled; then
 		die "You must compile packages before brewing. Use --compile option for this." 2
 	fi
 	
@@ -761,7 +786,7 @@ function brew_manual ()
 
 function publish_unpublished ()
 {
-	msg "${YLW}warn: uploading without brewing${DEF}"
+	warn "uploading without brewing${DEF}"
 	
 	mkdir -p "$KFPublishBrewedPC" "$KFPublishScript" "$KFPublishPackages"
 		
@@ -779,15 +804,25 @@ function publish_unpublished ()
 function upload ()
 {
 	local PreparedWsDir=""
+	local Preview=""
+	local Success="False"
 	
 	read_settings
 	
-	if ! compiled ; then
+	if ! compiled; then
 		die "You must compile packages before uploading. Use --compile option for this." 2
 	fi
 	
 	if ! [[ -d "$KFPublish" ]]; then
 		publish_unpublished
+	fi
+	
+	Preview="${MutPubContentPreview}.$(preview_extension)"
+	
+	if ! [[ -e "$Preview" ]]; then
+		die "No preview image in PublicationContent" 2
+	elif [[ $(stat --printf="%s" "$Preview") -ge 1048576 ]]; then
+		warn "The size of $(basename "$Preview") is greater than 1mb. Steam may prevent you from loading content with this image. if you get an error while loading - try using a smaller preview."
 	fi
 	
 	find "$KFPublish" -type d -empty -delete
@@ -797,7 +832,7 @@ function upload ()
 	cat > "$MutWsInfo" <<EOF
 \$Description "$(cat "$MutPubContentDescription")"
 \$Title "$(cat "$MutPubContentTitle")"
-\$PreviewFile "$(cygpath -w "$MutPubContentPreview")"
+\$PreviewFile "$(cygpath -w "$Preview")"
 \$Tags "$(cat "$MutPubContentTags")"
 \$MicroTxItem "false"
 \$PackageDirectory "$(cygpath -w "$PreparedWsDir")"
@@ -806,15 +841,24 @@ EOF
 	cp -rf "$KFPublish" "$PreparedWsDir"
 	
 	msg "upload to steam workshop"
-	if is_true "$ArgQuiet"; then
-		CMD //C "$(cygpath -w "$KFWorkshop") $(basename "$MutWsInfo")" &>/dev/null
-	else
-		CMD //C "$(cygpath -w "$KFWorkshop") $(basename "$MutWsInfo")"
-	fi
-	msg "${GRN}successfully uploaded to steam workshop${DEF}"
+	while read -r Output
+	do
+		if echo "$Output" | grep -qiF 'Successfully uploaded workshop file to Steam'; then
+			Success="True"
+			break
+		elif echo "$Output" | grep -qiF 'error'; then
+			err "UploadTool: $Output"
+		fi
+	done < <("$KFWorkshop" "$(basename "$MutWsInfo")" 2>&1)
 	
 	rm -rf "$PreparedWsDir"
 	rm -f "$MutWsInfo"
+	
+	if is_true "$Success"; then
+		msg "${GRN}successfully uploaded to steam workshop${DEF}"
+	else
+		die "upload to steam workshop failed" 2
+	fi
 }
 
 function run_test ()
@@ -843,24 +887,24 @@ function parse_combined_params () # $1: Combined short parameters
 	do
 		if [[ "$Position" -ge "$Length" ]]; then break; fi
 		case "${Param:$Position:2}" in
-			bm ) ((Position+=2)); ArgBrewManual="true"                     ;;
-			he ) ((Position+=2)); ArgHoldEditor="true"                     ;;
-			nc ) ((Position+=2)); ArgNoColors="true"                       ;;
+			bm ) ((Position+=2)); ArgBrewManual="true"               ;;
+			he ) ((Position+=2)); ArgHoldEditor="true"               ;;
+			nc ) ((Position+=2)); ArgNoColors="true"                 ;;
 		esac
 		
 		if [[ "$Position" -ge "$Length" ]]; then break; fi
 		case "${Param:$Position:1}" in
-			h  ) ((Position+=1)); ArgHelp="true"                           ;;
-			v  ) ((Position+=1)); ArgVersion="true"                        ;;
-			i  ) ((Position+=1)); ArgInit="true"                           ;;
-			c  ) ((Position+=1)); ArgCompile="true"                        ;;
-			b  ) ((Position+=1)); ArgBrew="true"                           ;;
-			u  ) ((Position+=1)); ArgUpload="true"                         ;;
-			t  ) ((Position+=1)); ArgTest="true"                           ;;
-			d  ) ((Position+=1)); ArgDebug="true"                          ;;
-			q  ) ((Position+=1)); ArgQuiet="true"                          ;;
-			f  ) ((Position+=1)); ArgForce="true"                          ;;
-			*  ) die "Unknown short option: -${Param:$Position:1}" 1       ;;
+			h  ) ((Position+=1)); ArgHelp="true"                     ;;
+			v  ) ((Position+=1)); ArgVersion="true"                  ;;
+			i  ) ((Position+=1)); ArgInit="true"                     ;;
+			c  ) ((Position+=1)); ArgCompile="true"                  ;;
+			b  ) ((Position+=1)); ArgBrew="true"                     ;;
+			u  ) ((Position+=1)); ArgUpload="true"                   ;;
+			t  ) ((Position+=1)); ArgTest="true"                     ;;
+			d  ) ((Position+=1)); ArgDebug="true"                    ;;
+			q  ) ((Position+=1)); ArgQuiet="true"                    ;;
+			f  ) ((Position+=1)); ArgForce="true"                    ;;
+			*  ) die "Unknown short option: -${Param:$Position:1}" 1 ;;
 		esac
 	done
 }
@@ -870,21 +914,21 @@ function parse_params () # $@: Args
 	while true
 	do
 		case "${1-}" in
-			  -h | --help        ) ArgHelp="true"                          ;;
-			  -v | --version     ) ArgVersion="true"                       ;;
-			  -i | --init        ) ArgInit="true"                          ;;
-			  -c | --compile     ) ArgCompile="true"                       ;;
-			  -b | --brew        ) ArgBrew="true"                          ;;
-			 -bm | --brew-manual ) ArgBrewManual="true"                    ;;
-			  -u | --upload      ) ArgUpload="true"                        ;;
-			  -t | --test        ) ArgTest="true"                          ;;
-			  -d | --debug       ) ArgDebug="true"                         ;;
-			  -q | --quiet       ) ArgQuiet="true"                         ;;
-			 -he | --hold-editor ) ArgHoldEditor="true"                    ;;
-			 -nc | --no-color    ) ArgNoColors="true"                      ;;
-			  -f | --force       ) ArgForce="true"                         ;;
-			       --*           ) die "Unknown option: ${1}" 1            ;;
-			  -*                 ) parse_combined_params "${1}"            ;;
+			  -h | --help        ) ArgHelp="true"                    ;;
+			  -v | --version     ) ArgVersion="true"                 ;;
+			  -i | --init        ) ArgInit="true"                    ;;
+			  -c | --compile     ) ArgCompile="true"                 ;;
+			  -b | --brew        ) ArgBrew="true"                    ;;
+			 -bm | --brew-manual ) ArgBrewManual="true"              ;;
+			  -u | --upload      ) ArgUpload="true"                  ;;
+			  -t | --test        ) ArgTest="true"                    ;;
+			  -d | --debug       ) ArgDebug="true"                   ;;
+			  -q | --quiet       ) ArgQuiet="true"                   ;;
+			 -he | --hold-editor ) ArgHoldEditor="true"              ;;
+			 -nc | --no-color    ) ArgNoColors="true"                ;;
+			  -f | --force       ) ArgForce="true"                   ;;
+			       --*           ) die "Unknown option: ${1}" 1      ;;
+			  -*                 ) parse_combined_params "${1}"      ;;
 			     *               ) if [[ -n "${1-}" ]]; then die "Unknown option: ${1-}" 1; fi; break ;;
 		esac
 		shift
