@@ -188,7 +188,7 @@ function die () # $1: String, $2: Exit code
 
 function warn () # $1: String
 {
-	msg "${YLW}${1-}"
+	msg "${YLW}${1-}${DEF}"
 }
 
 function usage ()
