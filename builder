@@ -227,7 +227,14 @@ EOF
 
 function version ()
 {
-	msg "${BLD}$ScriptName $(git describe 2> /dev/null)${DEF}"
+	local Version=""
+	
+	Version="$(git describe 2> /dev/null)"
+	if [[ -z "$Version" ]]; then
+		Version="(standalone)"
+	fi
+
+	msg "${BLD}$ScriptName $Version${DEF}"
 }
 
 function cleanup()
