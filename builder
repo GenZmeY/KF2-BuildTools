@@ -524,9 +524,9 @@ function merge_packages () # $1: Mutator name
 	
 	while read -r Upk
 	do
-		cp -f "$MutSource/$1/$Upk" "$KFWin64"
-		merge_package "$Upk" "$1.u"
-	done < <(find "$MutSource/$1" -type f -name '*.upk' -printf "%f\n")
+		cp -f "$Upk" "$KFWin64"
+		merge_package "$(basename "$Upk")" "$1.u"
+	done < <(find "$MutSource/$1" -type f -name '*.upk')
 }
 
 function parse_log () # $1: Logfile
