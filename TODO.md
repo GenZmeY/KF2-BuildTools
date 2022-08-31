@@ -4,4 +4,4 @@
 - [x] close the KFEditor window only after it stops writing to Launch.log to be able to show warnings
 - [ ] hooks (precompile, postcompile, prebrew, etc...)
 - [ ] improve error parser (class vs name mismatch, etc...)
-- [ ] manual brue config setting
+- [ ] manual brew config setting
