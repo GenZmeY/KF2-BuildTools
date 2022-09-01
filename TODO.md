@@ -5,3 +5,4 @@
 - [ ] hooks (precompile, postcompile, prebrew, etc...)
 - [ ] improve error parser (class vs name mismatch, etc...)
 - [ ] manual brew config setting
+- [ ] server testing
