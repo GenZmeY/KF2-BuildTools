@@ -64,6 +64,7 @@ KFLogs="$KFDoc/KFGame/Logs"
 MutSource="$(readlink -e "$ScriptDir/..")"
 MutConfig="$MutSource/Config"
 MutLocalization="$MutSource/Localization"
+MutBrewedPCAddon="$MutSource/BrewedPC"
 MutBuilderConfig="$MutSource/builder.cfg"
 MutPubContent="$MutSource/PublicationContent"
 MutPubContentDescription="$MutPubContent/description.txt"
@@ -692,6 +693,11 @@ function publish_common ()
 		mkdir -p "$KFPublishConfig"
 		cp -rf "$MutConfig"/* "$KFPublishConfig"
 	fi
+	
+	if [[ -d "$MutBrewedPCAddon" ]]; then
+		mkdir -p "$KFPublishBrewedPC"
+		cp -rf "$MutBrewedPCAddon"/* "$KFPublishBrewedPC"
+	fi
 }
 
 function brewed () # $1: Wait for packages
@@ -788,7 +794,6 @@ function brew ()
 	msg "${GRN}successfully brewed${DEF}"
 	
 	rm -f "$KFPublishBrewedPC"/*.tmp
-	publish_common
 	
 	find "$KFPublish" -type d -empty -delete
 }
@@ -805,8 +810,6 @@ function publish_unpublished ()
 		find "$MutSource/$Package" -type f -name '*.upk' -exec cp -f {} "$KFPublishPackages" \;
 	done
 	
-	publish_common
-	
 	find "$KFPublish" -type d -empty -delete
 }
 
@@ -818,15 +821,17 @@ function upload ()
 	
 	read_settings
 	
-	if ! compiled; then
+	if ! compiled && ! test -d "$MutBrewedPCAddon"; then
 		die "You must compile packages before uploading. Use --compile option for this." 2
 	fi
 	
 	if [[ -d "$KFPublish" ]]; then
 		brew_cleanup
-	else
+	elif [[ -d "$KFUnpublish" ]]; then
 		publish_unpublished
 	fi
+	
+	publish_common
 	
 	Preview="${MutPubContentPreview}.$(preview_extension)"
 	
@@ -838,6 +843,9 @@ function upload ()
 	
 	find "$KFPublish" -type d -empty -delete
 	
+	# it's a bad idea to use the $KFPublish folder for upload
+	# because in that case some files won't get uploaded to the workshop for some reason
+	# so create a temporary folder to get around this
 	PreparedWsDir="$(mktemp -d -u -p "$KFDoc")"
 
 	cat > "$MutWsInfo" <<EOF
