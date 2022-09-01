@@ -61,14 +61,6 @@ If you have *.upk or localization files, they must be in a specific location.
 
 Change the filesystem of the project to such a form that everything works correctly:  
 ```
-/Localization
-    /INT
-        *.int
-/PublicationContent
-    preview.png
-    description.txt
-    tags.txt
-    title.txt
 /SomePackageName1
     *.upk
     /Classes
@@ -79,8 +71,18 @@ Change the filesystem of the project to such a form that everything works correc
     /Classes
         *.uc
         *.upkg
+/PublicationContent
+    preview.png
+    description.txt
+    tags.txt
+    title.txt
+/Localization
+    /INT
+        *.int
 /Config
     *.ini
+/BrewedPC
+	*.*
 /tools
     builder
 builder.cfg
