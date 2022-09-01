@@ -11,7 +11,6 @@ Available options:
     -i, --init         generate builder.cfg and PublicationContent
     -c, --compile      compile package(s)
     -b, --brew         compress *.upk and place inside *.u
-   -bm, --brew-manual  the same (almost) as above, but with patched kfeditor by @notpeelz
     -u, --upload       upload package(s) to the Steam Workshop
     -t, --test         run local single player test
     -f, --force        overwrites existing files when used with --init
@@ -23,8 +22,8 @@ Available options:
     -h, --help         show this help
 
 Short options can be combined, examples:
+   -if                 recreate build.cfg and PublicationContent, replace old ones
   -cbu                 compile, brew, upload
- -cbmt                 compile, brew_manual, run_test
  -cbhe                 compile and brew without closing kf2editor
                        etc...
 ```
