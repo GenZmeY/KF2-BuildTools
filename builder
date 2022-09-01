@@ -91,7 +91,6 @@ KFEditorConfBackup="$KFEditorConf.backup"
 ArgInit="false"
 ArgCompile="false"
 ArgBrew="false"
-ArgBrewManual="false"
 ArgUpload="false"
 ArgTest="false"
 ArgVersion="false"
@@ -204,7 +203,6 @@ ${BLD}Available options:${DEF}
     -i, --init         generate $(basename "$MutBuilderConfig") and $(basename "$MutPubContent")
     -c, --compile      compile package(s)
     -b, --brew         compress *.upk and place inside *.u
-   -bm, --brew-manual  the same (almost) as above, but with patched kfeditor by @notpeelz
     -u, --upload       upload package(s) to the Steam Workshop
     -t, --test         run local single player test
     -f, --force        overwrites existing files when used with --init
@@ -216,8 +214,8 @@ ${BLD}Available options:${DEF}
     -h, --help         show this help
 
 ${BLD}Short options can be combined, examples:${DEF}
+   -if                 recreate build.cfg and PublicationContent, replace old ones
   -cbu                 compile, brew, upload
- -cbmt                 compile, brew_manual, run_test
  -cbhe                 compile and brew without closing kf2editor
                        etc...
 EOF
@@ -338,6 +336,16 @@ StripSource="True"
 # Specify them with a space as a separator,
 # Mutators will be compiled in the specified order 
 PackageBuildOrder="$PackageList"
+
+
+### Brew parameters ###
+
+# Packages you want to brew using @peelz's patched KFEditor.
+# Useful for cases where regular brew doesn't put *.upk inside the package.
+# Specify them with a space as a separator,
+# The order doesn't matter 
+
+PackagePeelzBrew=""
 
 
 ### Steam Workshop upload parameters ###
@@ -686,9 +694,9 @@ function publish_common ()
 	fi
 }
 
-function brewed ()
+function brewed () # $1: Wait for packages
 {
-	for Package in $PackageUpload
+	for Package in $1
 	do
 		if ! test -f "$KFPublishBrewedPC/$Package.u"; then
 			return 1
@@ -705,12 +713,11 @@ function brew_cleanup ()
 			find "$MutSource/$Package" -type f -name '*.upk' -printf "%f\n" | xargs -I{} find "$KFPublishBrewedPC" -type f -name {} -delete
 		fi
 	done
-	
-	rm -f "$KFPublishBrewedPC"/*.tmp
 }
 
 function brew ()
 {
+	local PackageBrew=""
 	local PID=""
 	
 	msg "brewing"
@@ -721,71 +728,66 @@ function brew ()
 		die "You must compile packages before brewing. Use --compile option for this." 2
 	fi
 	
+	if [[ -z "$PackagePeelzBrew" ]]; then
+		PackageBrew="$PackageBuildOrder"
+	else
+		for Package in $PackageBuildOrder
+		do
+			if ! echo "$PackagePeelzBrew" | grep -Pq "(^|\s+)$Package(\s+|$)"; then
+				PackageBrew="$Package "
+			fi
+		done
+	fi
+	
 	rm -rf "$KFPublish"
 	
 	mkdir -p "$KFPublishBrewedPC"
 	
 	if is_true "$ArgHoldEditor"; then
-		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditor") brewcontent -platform=PC $PackageUpload -useunpublished"
-		if ! brewed; then
+		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditor") brewcontent -platform=PC $PackageBrew -useunpublished"
+		if ! brewed "$PackageBrew"; then
 			brew_cleanup
 			die "brewing failed"
 		fi
-		msg "${GRN}successfully brewed${DEF}"
 	else
-		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditor") brewcontent -platform=PC $PackageUpload -useunpublished" &
+		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditor") brewcontent -platform=PC $PackageBrew -useunpublished" &
 		PID="$!"
 		while ps -p "$PID" &> /dev/null
 		do
-			if brewed; then
+			if brewed "$PackageBrew"; then
 				kill "$PID"
-				msg "${GRN}successfully brewed${DEF}"
 				break
 			fi
 			sleep 1
 		done
-		if ! brewed; then
+		if ! brewed "$PackageBrew"; then
 			brew_cleanup
 			die "brewing failed"
 		fi
 	fi
 	
-	publish_common
-	brew_cleanup
-	
-	find "$KFPublish" -type d -empty -delete
-}
-
-function brew_manual ()
-{
-	msg "manual brewing"
-
-	read_settings
-	
-	if ! compiled; then
-		die "You must compile packages before brewing. Use --compile option for this." 2
+	if [[ -n "$PackagePeelzBrew" ]]; then
+		msg "peelz brewing"
+		
+		if ! [[ -x "$KFEditorPatcher" ]]; then
+			get_latest_kfeditor_patcher "$KFEditorPatcher"
+		fi
+		
+		msg "patching $(basename "$KFEditor")"
+		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditorPatcher")"
+		msg "${GRN}successfully patched${DEF}"
+		
+		for Package in $PackagePeelzBrew
+		do
+			merge_packages "$Package"
+			mv "$KFWin64/$Package.u" "$KFPublishBrewedPC"
+			find "$MutSource/$Package" -type f -name '*.upk' -printf "%f\n" | xargs -I{} find "$KFPublishBrewedPC" -type f -name {} -delete
+		done
 	fi
-	
-	rm -rf "$KFPublish"
-	
-	mkdir -p "$KFPublishBrewedPC"
-
-	if ! [[ -x "$KFEditorPatcher" ]]; then
-		get_latest_kfeditor_patcher "$KFEditorPatcher"
-	fi
-	
-	msg "patching $(basename "$KFEditor")"
-	CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditorPatcher")"
-	msg "${GRN}successfully patched${DEF}"
-	
-	for Package in $PackageUpload
-	do
-		merge_packages "$Package"
-		mv "$KFWin64/$Package.u" "$KFPublishBrewedPC"
-	done
 	
 	msg "${GRN}successfully brewed${DEF}"
 	
+	rm -f "$KFPublishBrewedPC"/*.tmp
 	publish_common
 	
 	find "$KFPublish" -type d -empty -delete
@@ -820,7 +822,9 @@ function upload ()
 		die "You must compile packages before uploading. Use --compile option for this." 2
 	fi
 	
-	if ! [[ -d "$KFPublish" ]]; then
+	if [[ -d "$KFPublish" ]]; then
+		brew_cleanup
+	else
 		publish_unpublished
 	fi
 	
@@ -874,7 +878,7 @@ function run_test ()
 	
 	read_settings
 	
-	if brewed; then
+	if brewed "$PackageBuildOrder"; then
 		msg "run test (brewed)"
 	else
 		UseUnpublished="-useunpublished"
@@ -894,7 +898,6 @@ function parse_combined_params () # $1: Combined short parameters
 	do
 		if [[ "$Position" -ge "$Length" ]]; then break; fi
 		case "${Param:$Position:2}" in
-			bm ) ((Position+=2)); ArgBrewManual="true"               ;;
 			he ) ((Position+=2)); ArgHoldEditor="true"               ;;
 			nc ) ((Position+=2)); ArgNoColors="true"                 ;;
 		esac
@@ -926,7 +929,6 @@ function parse_params () # $@: Args
 			  -i | --init        ) ArgInit="true"                    ;;
 			  -c | --compile     ) ArgCompile="true"                 ;;
 			  -b | --brew        ) ArgBrew="true"                    ;;
-			 -bm | --brew-manual ) ArgBrewManual="true"              ;;
 			  -u | --upload      ) ArgUpload="true"                  ;;
 			  -t | --test        ) ArgTest="true"                    ;;
 			  -d | --debug       ) ArgDebug="true"                   ;;
@@ -964,7 +966,6 @@ function main ()
 	if is_true "$ArgInit";                          then init;                     fi
 	if is_true "$ArgCompile";                       then compile;                  fi
 	if is_true "$ArgBrew";                          then brew;                     fi
-	if is_true "$ArgBrewManual";                    then brew_manual;              fi
 	if is_true "$ArgUpload";                        then upload;                   fi
 	if is_true "$ArgTest";                          then run_test;                 fi
 	
