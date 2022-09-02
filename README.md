@@ -11,7 +11,14 @@
 - Easily switch between different projects.
 
 # Requirements
-- [git-bash](https://git-scm.com/download/win)
+- [Killing Floor 2](https://store.steampowered.com/app/232090/Killing_Floor_2/);
+- Killing Floor 2 - SDK;
+- [git-bash](https://git-scm.com/download/win).
+
+# Limits
+You can keep mod sources anywhere, but `Killing Floor 2` and `Killing Floor 2 - SDK` must be installed on the system drive (C:\ in most cases).  
+
+(I plan to fix this limitation in the future)
 
 # Add to your project
 Make sure that the location of folders and files in your project as follows (Correct it if it's not):  
