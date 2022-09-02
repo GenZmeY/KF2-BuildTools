@@ -54,7 +54,7 @@ If your project contains several mutators, *.upk files, external dependencies, o
 When you run compilation for the first time or do `./tools/builder --init` `builder.cfg` appears in your project folder.  
 Edit it to set build/test/upload options. The config contains the necessary comments inside.  
 
-Edit the files in the PublicationContent folder - they are responsible for the description in the Steam Workshop.  
+Edit the files in the `PublicationContent` folder - they are responsible for the description in the Steam Workshop.  
 
 ## Project filesystem
 If you have *.upk or localization files, they must be in a specific location.  
@@ -88,10 +88,27 @@ Change the filesystem of the project to such a form that everything works correc
 builder.cfg
 ```
 
+**Note:** Use the `BrewedPC` folder for additional content such as sound files for your weapons or other stuff. This will be copied to the final BrewedPC before being uploaded to the workshop.  
+By the way, this allows you to use a script to upload maps (although this was not its original purpose). Just put the map(s) in `BrewedPC` (don't forget to edit the `PublicationContent`) and run `./tools/builder -u`.
+
 ## Examples (Projects that use KF2-BuildTools)
-[LightTIM](https://github.com/GenZmeY/KF2-LightTIM) - simplest case (one mutator)  
-[ServerExt](https://github.com/GenZmeY/KF2-Server-Extension) - Two mutators are compiled, there are *.upk files and localization  
-[UnofficialMod](https://github.com/GenZmeY/UnofficialMod) - Three mutators are compiled (one of them is a dependency), two mutators are uploaded to the steam workshop  
+**Simplest case (one mutator):**  
+- [AdminAutoLogin](https://github.com/GenZmeY/KF2-AdminAutoLogin)
+- [StartWave](https://github.com/GenZmeY/KF2-StartWave)
+- [TAWOD](https://github.com/GenZmeY/KF2-TAWOD)
+- [ZedSpawner](https://github.com/GenZmeY/KF2-ZedSpawner)
+
+**Mutator + Localization:**  
+- [ControlledVoteCollector](https://github.com/GenZmeY/KF2-ControlledVoteCollector)
+- [CustomTraderInventory](https://github.com/GenZmeY/KF2-CustomTraderInventory)
+- [YetAnotherScoreboard](https://github.com/GenZmeY/KF2-YetAnotherScoreboard)
+
+**Two mutators are compiled, there are upk and localization:**  
+- [ServerExt](https://github.com/GenZmeY/KF2-Server-Extension)
+
+**Three mutators are compiled (one of them is a dependency),**  
+**two mutators are uploaded to the steam workshop:**  
+- [UnofficialMod](https://github.com/GenZmeY/UnofficialMod)
 
 # Other
 [TODO List](TODO.md)
