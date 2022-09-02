@@ -284,15 +284,17 @@ function init ()
 		msg "creating new $(basename "$MutBuilderConfig")"
 	fi
 	
-	while read -r Map
-	do
-		if [[ -z "$AviableMaps" ]]; then
-			DefMap="$Map"
-			AviableMaps="$Map"
-		else
-			AviableMaps="$AviableMaps $Map"
-		fi
-	done < <(find "$MutBrewedPCAddon" -type f -iname '*.kfm' -printf "%f\n" | sort)
+	if [[ -d "$MutBrewedPCAddon" ]]; then
+		while read -r Map
+		do
+			if [[ -z "$AviableMaps" ]]; then
+				DefMap="$Map"
+				AviableMaps="$Map"
+			else
+				AviableMaps="$AviableMaps $Map"
+			fi
+		done < <(find "$MutBrewedPCAddon" -type f -iname '*.kfm' -printf "%f\n" | sort)
+	fi
 
 	while read -r Package
 	do
