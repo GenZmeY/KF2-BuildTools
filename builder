@@ -256,16 +256,25 @@ function restore_kfeditorconf ()
 	fi
 }
 
+function print_list () # $1: List with spaces, $2: New separator
+{
+	echo "${1// /$2}"
+}
+
 function init ()
 {
 	local PackageList=""
 	local AviableMutators=""
 	local AviableGamemodes=""
-	local ConfigGamemodes=""
+	local AviableMaps=""
 	local ProjectName=""
 	local GitUsername=""
 	local GitRemoteUrl=""
 	local PublicationTags=""
+	local DefGamemode=""
+	local DefMap=""
+	local BaseList=""
+	local BaseListNext=""
 	
 	if [[ -e "$MutBuilderConfig" ]]; then
 		if is_true "$ArgForce"; then
@@ -274,6 +283,16 @@ function init ()
 	else
 		msg "creating new $(basename "$MutBuilderConfig")"
 	fi
+	
+	while read -r Map
+	do
+		if [[ -z "$AviableMaps" ]]; then
+			DefMap="$Map"
+			AviableMaps="$Map"
+		else
+			AviableMaps="$AviableMaps $Map"
+		fi
+	done < <(find "$MutBrewedPCAddon" -type f -iname '*.kfm' -printf "%f\n" | sort)
 
 	while read -r Package
 	do
@@ -284,44 +303,91 @@ function init ()
 		fi
 	done < <(find "$MutSource" -mindepth 2 -maxdepth 2 -type d -ipath '*/Classes' | sed -r 's|.+/([^/]+)/[^/]+|\1|' | sort)
 	
-	if [[ -z "$PackageList" ]]; then
-		die "No packages found! Check project filesystem, fix config and try again"
+	if [[ -n "$PackageList" ]]; then
+		msg "packages found: $(print_list "$PackageList" ", ")"
 	fi
 	
-	msg "packages found: $PackageList"
-	
-	for Package in $PackageList
-	do
+	# DISCLAMER: BigO nightmare (*)
+	# Remove seniors with a weak psyche from the screen
+	# 
+	# (*) As planned though:
+	# Initialized once and quickly even on large projects,
+	# There is no point in optimizing this
+	if [[ -n "$PackageList" ]]; then
 		# find available mutators
-		while read -r MutClass
+		BaseList='(KF)?Mutator'
+		BaseListNext=''
+		while [[ -n "$BaseList" ]]
 		do
-			if [[ -z "$AviableMutators" ]]; then
-				AviableMutators="$Package.$MutClass"
-			else
-				AviableMutators="$AviableMutators,$Package.$MutClass"
-			fi
-		done < <(grep -rihPo '\s.+extends\s(KF)?Mutator' "$MutSource/$Package" | awk '{ print $1 }')
+			for Base in $BaseList
+			do
+				for Package in $PackageList
+				do
+					while read -r Class
+					do
+						if [[ -z "$AviableMutators" ]]; then
+							AviableMutators="$Package.$Class"
+						else
+							AviableMutators="$AviableMutators $Package.$Class"
+						fi
+						if [[ -z "$BaseListNext" ]]; then
+							BaseListNext="$Class"
+						else
+							BaseListNext="$BaseListNext $Class"
+						fi
+					done < <(grep -rihPo "\s.+extends\s${Base}" "${MutSource}/${Package}" | awk '{ print $1 }')
+				done
+			done
+			BaseList="$BaseListNext"
+			BaseListNext=""
+		done
 		
 		# find available gamemodes
-		while read -r GamemodeClass
+		BaseList='KFGameInfo_'
+		BaseListNext=''
+		while [[ -n "$BaseList" ]]
 		do
-			if [[ -z "$AviableGamemodes" ]]; then
-				AviableGamemodes="$Package.$GamemodeClass"
-			else
-				AviableGamemodes="$AviableGamemodes,$Package.$GamemodeClass"
-			fi
-		done < <(grep -rihPo '\s.+extends\sKFGameInfo_' "$MutSource/$Package" | awk '{ print $1 }')
-	done
+			for Base in $BaseList
+			do
+				for Package in $PackageList
+				do
+					while read -r Class
+					do
+						if [[ -z "$AviableGamemodes" ]]; then
+							AviableGamemodes="$Package.$Class"
+							if [[ -z "$DefGamemode" ]]; then
+								DefGamemode="$Package.$Class"
+							fi
+						else
+							AviableGamemodes="$AviableGamemodes $Package.$Class"
+						fi
+						if [[ -z "$BaseListNext" ]]; then
+							BaseListNext="$Class"
+						else
+							BaseListNext="$BaseListNext $Class"
+						fi
+					done < <(grep -rihPo "\s.+extends\s${Base}" "${MutSource}/${Package}" | awk '{ print $1 }')
+				done
+			done
+			BaseList="$BaseListNext"
+			BaseListNext=""
+		done
+	fi
 	
 	if [[ -n "$AviableMutators" ]]; then
-		msg "mutators found: $AviableMutators"
+		msg "mutators found: $(print_list "$AviableMutators" ", ")"
 	fi
 	
 	if [[ -z "$AviableGamemodes" ]]; then
-		ConfigGamemodes="KFGameContent.KFGameInfo_Survival"
+		DefGamemode="KFGameContent.KFGameInfo_Survival"
 	else
-		ConfigGamemodes="$AviableGamemodes"
-		msg "custom gamemodes found: $AviableGamemodes"
+		msg "custom gamemodes found: $(print_list "$AviableGamemodes" ", ")"
+	fi
+	
+	if [[ -z "$AviableMaps" ]]; then
+		DefMap="KF-Nuked"
+	else
+		msg "maps found: $(print_list "$AviableMaps" ", ")"
 	fi
 	
 	if is_true "$ArgForce" || ! [[ -e "$MutBuilderConfig" ]]; then
@@ -360,7 +426,7 @@ PackageUpload="$PackageList"
 ### Test parameters ###
 
 # Map:
-Map="KF-Nuked"
+Map="$DefMap"
 
 # Game:
 # Survival:       KFGameContent.KFGameInfo_Survival
@@ -368,7 +434,7 @@ Map="KF-Nuked"
 # Endless:        KFGameContent.KFGameInfo_Endless
 # Objective:      KFGameContent.KFGameInfo_Objective
 # Versus:         KFGameContent.KFGameInfo_VersusSurvival
-Game="$ConfigGamemodes"
+Game="$DefGamemode"
 
 # Difficulty:
 # Normal:         0
@@ -384,7 +450,7 @@ Difficulty="0"
 GameLength="0"
 
 # Mutators
-Mutators="$AviableMutators"
+Mutators="$(print_list "$AviableMutators" ",")"
 
 # Additional parameters
 Args=""
@@ -403,15 +469,16 @@ EOF
 	
 	if is_true "$ArgForce" || ! [[ -e "$MutPubContentDescription" ]]; then
 		:> "$MutPubContentDescription"
-		echo "[h1]${ProjectName}[/h1]" >> "$MutPubContentDescription"
-		echo "" >> "$MutPubContentDescription"
-		if [[ -n "$AviableGamemodes" ]] || [[ -n "$AviableMutators" ]]; then
+		if [[ -n "$AviableGamemodes" ]] || [[ -n "$AviableMutators" ]] || [[ -n "$AviableMaps" ]]; then
 			echo "[h1]Description[/h1]" >> "$MutPubContentDescription"
+			if [[ -n "$AviableMaps" ]]; then
+				echo "[b]Maps:[/b][list][*]$(print_list "$AviableMaps" '[*]')[/list]" >> "$MutPubContentDescription"
+			fi
 			if [[ -n "$AviableGamemodes" ]]; then
-				echo "[b]Gamemode(s):[/b] $AviableGamemodes" >> "$MutPubContentDescription"
+				echo "[b]Gamemodes:[/b][list][*]$(print_list "$AviableGamemodes" '[*]')[/list]" >> "$MutPubContentDescription"
 			fi
 			if [[ -n "$AviableMutators" ]]; then
-				echo "[b]Mutator(s):[/b] $AviableMutators" >> "$MutPubContentDescription"
+				echo "[b]Mutators:[/b][list][*]$(print_list "$AviableMutators" '[*]')[/list]" >> "$MutPubContentDescription"
 			fi
 			echo "" >> "$MutPubContentDescription"
 		fi
