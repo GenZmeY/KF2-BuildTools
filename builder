@@ -64,6 +64,7 @@ KFLogs="$KFDoc/KFGame/Logs"
 MutSource="$(readlink -e "$ScriptDir/..")"
 MutConfig="$MutSource/Config"
 MutLocalization="$MutSource/Localization"
+MutBrewedPCAddon="$MutSource/BrewedPC"
 MutBuilderConfig="$MutSource/builder.cfg"
 MutPubContent="$MutSource/PublicationContent"
 MutPubContentDescription="$MutPubContent/description.txt"
@@ -91,7 +92,6 @@ KFEditorConfBackup="$KFEditorConf.backup"
 ArgInit="false"
 ArgCompile="false"
 ArgBrew="false"
-ArgBrewManual="false"
 ArgUpload="false"
 ArgTest="false"
 ArgVersion="false"
@@ -204,7 +204,6 @@ ${BLD}Available options:${DEF}
     -i, --init         generate $(basename "$MutBuilderConfig") and $(basename "$MutPubContent")
     -c, --compile      compile package(s)
     -b, --brew         compress *.upk and place inside *.u
-   -bm, --brew-manual  the same (almost) as above, but with patched kfeditor by @notpeelz
     -u, --upload       upload package(s) to the Steam Workshop
     -t, --test         run local single player test
     -f, --force        overwrites existing files when used with --init
@@ -216,8 +215,8 @@ ${BLD}Available options:${DEF}
     -h, --help         show this help
 
 ${BLD}Short options can be combined, examples:${DEF}
+   -if                 recreate build.cfg and PublicationContent, replace old ones
   -cbu                 compile, brew, upload
- -cbmt                 compile, brew_manual, run_test
  -cbhe                 compile and brew without closing kf2editor
                        etc...
 EOF
@@ -257,16 +256,25 @@ function restore_kfeditorconf ()
 	fi
 }
 
+function print_list () # $1: List with spaces, $2: New separator
+{
+	echo "${1// /$2}"
+}
+
 function init ()
 {
 	local PackageList=""
 	local AviableMutators=""
 	local AviableGamemodes=""
-	local ConfigGamemodes=""
+	local AviableMaps=""
 	local ProjectName=""
 	local GitUsername=""
 	local GitRemoteUrl=""
 	local PublicationTags=""
+	local DefGamemode=""
+	local DefMap=""
+	local BaseList=""
+	local BaseListNext=""
 	
 	if [[ -e "$MutBuilderConfig" ]]; then
 		if is_true "$ArgForce"; then
@@ -275,6 +283,16 @@ function init ()
 	else
 		msg "creating new $(basename "$MutBuilderConfig")"
 	fi
+	
+	while read -r Map
+	do
+		if [[ -z "$AviableMaps" ]]; then
+			DefMap="$Map"
+			AviableMaps="$Map"
+		else
+			AviableMaps="$AviableMaps $Map"
+		fi
+	done < <(find "$MutBrewedPCAddon" -type f -iname '*.kfm' -printf "%f\n" | sort)
 
 	while read -r Package
 	do
@@ -285,44 +303,91 @@ function init ()
 		fi
 	done < <(find "$MutSource" -mindepth 2 -maxdepth 2 -type d -ipath '*/Classes' | sed -r 's|.+/([^/]+)/[^/]+|\1|' | sort)
 	
-	if [[ -z "$PackageList" ]]; then
-		die "No packages found! Check project filesystem, fix config and try again"
+	if [[ -n "$PackageList" ]]; then
+		msg "packages found: $(print_list "$PackageList" ", ")"
 	fi
 	
-	msg "packages found: $PackageList"
-	
-	for Package in $PackageList
-	do
+	# DISCLAMER: BigO nightmare (*)
+	# Remove seniors with a weak psyche from the screen
+	# 
+	# (*) As planned though:
+	# Initialized once and quickly even on large projects,
+	# There is no point in optimizing this
+	if [[ -n "$PackageList" ]]; then
 		# find available mutators
-		while read -r MutClass
+		BaseList='(KF)?Mutator'
+		BaseListNext=''
+		while [[ -n "$BaseList" ]]
 		do
-			if [[ -z "$AviableMutators" ]]; then
-				AviableMutators="$Package.$MutClass"
-			else
-				AviableMutators="$AviableMutators,$Package.$MutClass"
-			fi
-		done < <(grep -rihPo '\s.+extends\s(KF)?Mutator' "$MutSource/$Package" | awk '{ print $1 }')
+			for Base in $BaseList
+			do
+				for Package in $PackageList
+				do
+					while read -r Class
+					do
+						if [[ -z "$AviableMutators" ]]; then
+							AviableMutators="$Package.$Class"
+						else
+							AviableMutators="$AviableMutators $Package.$Class"
+						fi
+						if [[ -z "$BaseListNext" ]]; then
+							BaseListNext="$Class"
+						else
+							BaseListNext="$BaseListNext $Class"
+						fi
+					done < <(grep -rihPo "\s.+extends\s${Base}" "${MutSource}/${Package}" | awk '{ print $1 }')
+				done
+			done
+			BaseList="$BaseListNext"
+			BaseListNext=""
+		done
 		
 		# find available gamemodes
-		while read -r GamemodeClass
+		BaseList='KFGameInfo_'
+		BaseListNext=''
+		while [[ -n "$BaseList" ]]
 		do
-			if [[ -z "$AviableGamemodes" ]]; then
-				AviableGamemodes="$Package.$GamemodeClass"
-			else
-				AviableGamemodes="$AviableGamemodes,$Package.$GamemodeClass"
-			fi
-		done < <(grep -rihPo '\s.+extends\sKFGameInfo_' "$MutSource/$Package" | awk '{ print $1 }')
-	done
+			for Base in $BaseList
+			do
+				for Package in $PackageList
+				do
+					while read -r Class
+					do
+						if [[ -z "$AviableGamemodes" ]]; then
+							AviableGamemodes="$Package.$Class"
+							if [[ -z "$DefGamemode" ]]; then
+								DefGamemode="$Package.$Class"
+							fi
+						else
+							AviableGamemodes="$AviableGamemodes $Package.$Class"
+						fi
+						if [[ -z "$BaseListNext" ]]; then
+							BaseListNext="$Class"
+						else
+							BaseListNext="$BaseListNext $Class"
+						fi
+					done < <(grep -rihPo "\s.+extends\s${Base}" "${MutSource}/${Package}" | awk '{ print $1 }')
+				done
+			done
+			BaseList="$BaseListNext"
+			BaseListNext=""
+		done
+	fi
 	
 	if [[ -n "$AviableMutators" ]]; then
-		msg "mutators found: $AviableMutators"
+		msg "mutators found: $(print_list "$AviableMutators" ", ")"
 	fi
 	
 	if [[ -z "$AviableGamemodes" ]]; then
-		ConfigGamemodes="KFGameContent.KFGameInfo_Survival"
+		DefGamemode="KFGameContent.KFGameInfo_Survival"
 	else
-		ConfigGamemodes="$AviableGamemodes"
-		msg "custom gamemodes found: $AviableGamemodes"
+		msg "custom gamemodes found: $(print_list "$AviableGamemodes" ", ")"
+	fi
+	
+	if [[ -z "$AviableMaps" ]]; then
+		DefMap="KF-Nuked"
+	else
+		msg "maps found: $(print_list "$AviableMaps" ", ")"
 	fi
 	
 	if is_true "$ArgForce" || ! [[ -e "$MutBuilderConfig" ]]; then
@@ -340,6 +405,16 @@ StripSource="True"
 PackageBuildOrder="$PackageList"
 
 
+### Brew parameters ###
+
+# Packages you want to brew using @peelz's patched KFEditor.
+# Useful for cases where regular brew doesn't put *.upk inside the package.
+# Specify them with a space as a separator,
+# The order doesn't matter 
+
+PackagePeelzBrew=""
+
+
 ### Steam Workshop upload parameters ###
 
 # Mutators that will be uploaded to the workshop
@@ -351,7 +426,7 @@ PackageUpload="$PackageList"
 ### Test parameters ###
 
 # Map:
-Map="KF-Nuked"
+Map="$DefMap"
 
 # Game:
 # Survival:       KFGameContent.KFGameInfo_Survival
@@ -359,7 +434,7 @@ Map="KF-Nuked"
 # Endless:        KFGameContent.KFGameInfo_Endless
 # Objective:      KFGameContent.KFGameInfo_Objective
 # Versus:         KFGameContent.KFGameInfo_VersusSurvival
-Game="$ConfigGamemodes"
+Game="$DefGamemode"
 
 # Difficulty:
 # Normal:         0
@@ -375,7 +450,7 @@ Difficulty="0"
 GameLength="0"
 
 # Mutators
-Mutators="$AviableMutators"
+Mutators="$(print_list "$AviableMutators" ",")"
 
 # Additional parameters
 Args=""
@@ -394,15 +469,16 @@ EOF
 	
 	if is_true "$ArgForce" || ! [[ -e "$MutPubContentDescription" ]]; then
 		:> "$MutPubContentDescription"
-		echo "[h1]${ProjectName}[/h1]" >> "$MutPubContentDescription"
-		echo "" >> "$MutPubContentDescription"
-		if [[ -n "$AviableGamemodes" ]] || [[ -n "$AviableMutators" ]]; then
+		if [[ -n "$AviableGamemodes" ]] || [[ -n "$AviableMutators" ]] || [[ -n "$AviableMaps" ]]; then
 			echo "[h1]Description[/h1]" >> "$MutPubContentDescription"
+			if [[ -n "$AviableMaps" ]]; then
+				echo "[b]Maps:[/b][list][*]$(print_list "$AviableMaps" '[*]')[/list]" >> "$MutPubContentDescription"
+			fi
 			if [[ -n "$AviableGamemodes" ]]; then
-				echo "[b]Gamemode(s):[/b] $AviableGamemodes" >> "$MutPubContentDescription"
+				echo "[b]Gamemodes:[/b][list][*]$(print_list "$AviableGamemodes" '[*]')[/list]" >> "$MutPubContentDescription"
 			fi
 			if [[ -n "$AviableMutators" ]]; then
-				echo "[b]Mutator(s):[/b] $AviableMutators" >> "$MutPubContentDescription"
+				echo "[b]Mutators:[/b][list][*]$(print_list "$AviableMutators" '[*]')[/list]" >> "$MutPubContentDescription"
 			fi
 			echo "" >> "$MutPubContentDescription"
 		fi
@@ -684,11 +760,16 @@ function publish_common ()
 		mkdir -p "$KFPublishConfig"
 		cp -rf "$MutConfig"/* "$KFPublishConfig"
 	fi
+	
+	if [[ -d "$MutBrewedPCAddon" ]]; then
+		mkdir -p "$KFPublishBrewedPC"
+		cp -rf "$MutBrewedPCAddon"/* "$KFPublishBrewedPC"
+	fi
 }
 
-function brewed ()
+function brewed () # $1: Wait for packages
 {
-	for Package in $PackageUpload
+	for Package in $1
 	do
 		if ! test -f "$KFPublishBrewedPC/$Package.u"; then
 			return 1
@@ -705,12 +786,11 @@ function brew_cleanup ()
 			find "$MutSource/$Package" -type f -name '*.upk' -printf "%f\n" | xargs -I{} find "$KFPublishBrewedPC" -type f -name {} -delete
 		fi
 	done
-	
-	rm -f "$KFPublishBrewedPC"/*.tmp
 }
 
 function brew ()
 {
+	local PackageBrew=""
 	local PID=""
 	
 	msg "brewing"
@@ -721,72 +801,66 @@ function brew ()
 		die "You must compile packages before brewing. Use --compile option for this." 2
 	fi
 	
+	if [[ -z "$PackagePeelzBrew" ]]; then
+		PackageBrew="$PackageBuildOrder"
+	else
+		for Package in $PackageBuildOrder
+		do
+			if ! echo "$PackagePeelzBrew" | grep -Pq "(^|\s+)$Package(\s+|$)"; then
+				PackageBrew="$Package "
+			fi
+		done
+	fi
+	
 	rm -rf "$KFPublish"
 	
 	mkdir -p "$KFPublishBrewedPC"
 	
 	if is_true "$ArgHoldEditor"; then
-		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditor") brewcontent -platform=PC $PackageUpload -useunpublished"
-		if ! brewed; then
+		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditor") brewcontent -platform=PC $PackageBrew -useunpublished"
+		if ! brewed "$PackageBrew"; then
 			brew_cleanup
 			die "brewing failed"
 		fi
-		msg "${GRN}successfully brewed${DEF}"
 	else
-		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditor") brewcontent -platform=PC $PackageUpload -useunpublished" &
+		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditor") brewcontent -platform=PC $PackageBrew -useunpublished" &
 		PID="$!"
 		while ps -p "$PID" &> /dev/null
 		do
-			if brewed; then
+			if brewed "$PackageBrew"; then
 				kill "$PID"
-				msg "${GRN}successfully brewed${DEF}"
 				break
 			fi
 			sleep 1
 		done
-		if ! brewed; then
+		if ! brewed "$PackageBrew"; then
 			brew_cleanup
 			die "brewing failed"
 		fi
 	fi
 	
-	publish_common
-	brew_cleanup
-	
-	find "$KFPublish" -type d -empty -delete
-}
-
-function brew_manual ()
-{
-	msg "manual brewing"
-
-	read_settings
-	
-	if ! compiled; then
-		die "You must compile packages before brewing. Use --compile option for this." 2
+	if [[ -n "$PackagePeelzBrew" ]]; then
+		msg "peelz brewing"
+		
+		if ! [[ -x "$KFEditorPatcher" ]]; then
+			get_latest_kfeditor_patcher "$KFEditorPatcher"
+		fi
+		
+		msg "patching $(basename "$KFEditor")"
+		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditorPatcher")"
+		msg "${GRN}successfully patched${DEF}"
+		
+		for Package in $PackagePeelzBrew
+		do
+			merge_packages "$Package"
+			mv "$KFWin64/$Package.u" "$KFPublishBrewedPC"
+			find "$MutSource/$Package" -type f -name '*.upk' -printf "%f\n" | xargs -I{} find "$KFPublishBrewedPC" -type f -name {} -delete
+		done
 	fi
-	
-	rm -rf "$KFPublish"
-	
-	mkdir -p "$KFPublishBrewedPC"
-
-	if ! [[ -x "$KFEditorPatcher" ]]; then
-		get_latest_kfeditor_patcher "$KFEditorPatcher"
-	fi
-	
-	msg "patching $(basename "$KFEditor")"
-	CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditorPatcher")"
-	msg "${GRN}successfully patched${DEF}"
-	
-	for Package in $PackageUpload
-	do
-		merge_packages "$Package"
-		mv "$KFWin64/$Package.u" "$KFPublishBrewedPC"
-	done
 	
 	msg "${GRN}successfully brewed${DEF}"
 	
-	publish_common
+	rm -f "$KFPublishBrewedPC"/*.tmp
 	
 	find "$KFPublish" -type d -empty -delete
 }
@@ -803,8 +877,6 @@ function publish_unpublished ()
 		find "$MutSource/$Package" -type f -name '*.upk' -exec cp -f {} "$KFPublishPackages" \;
 	done
 	
-	publish_common
-	
 	find "$KFPublish" -type d -empty -delete
 }
 
@@ -816,13 +888,17 @@ function upload ()
 	
 	read_settings
 	
-	if ! compiled; then
+	if ! compiled && ! test -d "$MutBrewedPCAddon"; then
 		die "You must compile packages before uploading. Use --compile option for this." 2
 	fi
 	
-	if ! [[ -d "$KFPublish" ]]; then
+	if [[ -d "$KFPublish" ]]; then
+		brew_cleanup
+	elif [[ -d "$KFUnpublish" ]]; then
 		publish_unpublished
 	fi
+	
+	publish_common
 	
 	Preview="${MutPubContentPreview}.$(preview_extension)"
 	
@@ -834,6 +910,9 @@ function upload ()
 	
 	find "$KFPublish" -type d -empty -delete
 	
+	# it's a bad idea to use the $KFPublish folder for upload
+	# because in that case some files won't get uploaded to the workshop for some reason
+	# so create a temporary folder to get around this
 	PreparedWsDir="$(mktemp -d -u -p "$KFDoc")"
 
 	cat > "$MutWsInfo" <<EOF
@@ -874,7 +953,7 @@ function run_test ()
 	
 	read_settings
 	
-	if brewed; then
+	if brewed "$PackageBuildOrder"; then
 		msg "run test (brewed)"
 	else
 		UseUnpublished="-useunpublished"
@@ -894,7 +973,6 @@ function parse_combined_params () # $1: Combined short parameters
 	do
 		if [[ "$Position" -ge "$Length" ]]; then break; fi
 		case "${Param:$Position:2}" in
-			bm ) ((Position+=2)); ArgBrewManual="true"               ;;
 			he ) ((Position+=2)); ArgHoldEditor="true"               ;;
 			nc ) ((Position+=2)); ArgNoColors="true"                 ;;
 		esac
@@ -926,7 +1004,6 @@ function parse_params () # $@: Args
 			  -i | --init        ) ArgInit="true"                    ;;
 			  -c | --compile     ) ArgCompile="true"                 ;;
 			  -b | --brew        ) ArgBrew="true"                    ;;
-			 -bm | --brew-manual ) ArgBrewManual="true"              ;;
 			  -u | --upload      ) ArgUpload="true"                  ;;
 			  -t | --test        ) ArgTest="true"                    ;;
 			  -d | --debug       ) ArgDebug="true"                   ;;
@@ -964,7 +1041,6 @@ function main ()
 	if is_true "$ArgInit";                          then init;                     fi
 	if is_true "$ArgCompile";                       then compile;                  fi
 	if is_true "$ArgBrew";                          then brew;                     fi
-	if is_true "$ArgBrewManual";                    then brew_manual;              fi
 	if is_true "$ArgUpload";                        then upload;                   fi
 	if is_true "$ArgTest";                          then run_test;                 fi
 	
