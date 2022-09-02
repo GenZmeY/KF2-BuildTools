@@ -337,7 +337,7 @@ function init ()
 						else
 							BaseListNext="$BaseListNext $Class"
 						fi
-					done < <(grep -rihPo "\s.+extends\s${Base}" "${MutSource}/${Package}" | awk '{ print $1 }')
+					done < <(grep -rihPo "\s.+extends\s${Base}(\W|$)" "${MutSource}/${Package}" | awk '{ print $1 }')
 				done
 			done
 			BaseList="$BaseListNext"
@@ -368,7 +368,7 @@ function init ()
 						else
 							BaseListNext="$BaseListNext $Class"
 						fi
-					done < <(grep -rihPo "\s.+extends\s${Base}" "${MutSource}/${Package}" | awk '{ print $1 }')
+					done < <(grep -rihPo "\s.+extends\s${Base}(\W|$)" "${MutSource}/${Package}" | awk '{ print $1 }')
 				done
 			done
 			BaseList="$BaseListNext"
