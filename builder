@@ -817,26 +817,28 @@ function brew ()
 	
 	mkdir -p "$KFPublishBrewedPC"
 	
-	if is_true "$ArgHoldEditor"; then
-		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditor") brewcontent -platform=PC $PackageBrew -useunpublished"
-		if ! brewed "$PackageBrew"; then
-			brew_cleanup
-			die "brewing failed"
-		fi
-	else
-		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditor") brewcontent -platform=PC $PackageBrew -useunpublished" &
-		PID="$!"
-		while ps -p "$PID" &> /dev/null
-		do
-			if brewed "$PackageBrew"; then
-				kill "$PID"
-				break
+	if [[ -n "$PackageBrew" ]]; then
+		if is_true "$ArgHoldEditor"; then
+			CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditor") brewcontent -platform=PC $PackageBrew -useunpublished"
+			if ! brewed "$PackageBrew"; then
+				brew_cleanup
+				die "brewing failed"
 			fi
-			sleep 1
-		done
-		if ! brewed "$PackageBrew"; then
-			brew_cleanup
-			die "brewing failed"
+		else
+			CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditor") brewcontent -platform=PC $PackageBrew -useunpublished" &
+			PID="$!"
+			while ps -p "$PID" &> /dev/null
+			do
+				if brewed "$PackageBrew"; then
+					kill "$PID"
+					break
+				fi
+				sleep 1
+			done
+			if ! brewed "$PackageBrew"; then
+				brew_cleanup
+				die "brewing failed"
+			fi
 		fi
 	fi
 	
