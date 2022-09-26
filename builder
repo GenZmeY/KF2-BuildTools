@@ -244,8 +244,12 @@ function cleanup()
 
 function backup_kfeditorconf ()
 {
-	msg "backup $(basename "$KFEditorConf") to $(basename "$KFEditorConfBackup")"
-	cp -f "$KFEditorConf" "$KFEditorConfBackup"
+	if [[ -e "$KFEditorConf" ]]; then
+		msg "backup $(basename "$KFEditorConf") to $(basename "$KFEditorConfBackup")"
+		cp -f "$KFEditorConf" "$KFEditorConfBackup"
+	else
+		die "$(basename "$KFEditorConf") not found! Run KF2 Editor to generate the config" 2
+	fi
 }
 
 function restore_kfeditorconf ()
