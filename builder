@@ -607,7 +607,7 @@ function merge_packages () # $1: Mutator name
 	do
 		cp -f "$Upk" "$KFWin64"
 		merge_package "$(basename "$Upk")" "$1.u"
-	done < <(find "$MutSource/$1" -type f -name '*.upk')
+	done < <(find "$MutSource/$1" -type f -iname '*.upk' -not -ipath "*/Weapons/*")
 }
 
 function parse_log () # $1: Logfile
@@ -669,7 +669,7 @@ function compiled ()
 
 function find_log ()
 {
-	find "$KFLogs" -type f -name '*.log' -printf '%T+ %p\n' | sort -r | head -n1 | cut -f2- -d" "
+	find "$KFLogs" -type f -iname '*.log' -printf '%T+ %p\n' | sort -r | head -n1 | cut -f2- -d" "
 }
 
 function compile ()
@@ -701,7 +701,9 @@ function compile ()
 	
 	for Package in $PackageBuildOrder
 	do
-		find "$MutSource/$Package" -type f -name '*.upk' -exec cp -f {} "$KFUnpublishPackages" \;
+		find "$MutSource/$Package" -type f -iname '*.upk' -not -ipath "*/Weapons/*" -exec cp -f {} "$KFUnpublishPackages" \;
+		find "$MutSource/$Package" -type d -iname 'WwiseAudio' -exec cp -rf {} "$KFUnpublishBrewedPC" \;
+		find "$MutSource/$Package" -type d -iname 'Weapons' -exec cp -rf {} "$KFUnpublishPackages" \;
 	done
 	
 	if [[ -d "$MutLocalization" ]]; then
@@ -787,8 +789,8 @@ function brew_cleanup ()
 	for Package in $PackageBuildOrder
 	do
 		if ! echo "$PackageUpload" | grep -Pq "(^|\s+)$Package(\s+|$)"; then
-			find "$KFPublishBrewedPC" -type f -name "$Package.u" -delete
-			find "$MutSource/$Package" -type f -name '*.upk' -printf "%f\n" | xargs -I{} find "$KFPublishBrewedPC" -type f -name {} -delete
+			find "$KFPublishBrewedPC" -type f -iname "$Package.u" -delete
+			find "$MutSource/$Package" -type f -iname '*.upk' -printf "%f\n" | xargs -I{} find "$KFPublishBrewedPC" -type f -iname {} -delete
 		fi
 	done
 }
@@ -819,7 +821,13 @@ function brew ()
 	
 	rm -rf "$KFPublish"
 	
-	mkdir -p "$KFPublishBrewedPC"
+	mkdir -p "$KFPublishBrewedPC" "$KFPublishPackages"
+	
+	for Package in $PackageBuildOrder
+	do
+		find "$MutSource/$Package" -type d -iname 'WwiseAudio' -exec cp -rf {} "$KFPublishBrewedPC" \;
+		find "$MutSource/$Package" -type d -iname 'Weapons' -exec cp -rf {} "$KFPublishPackages" \;
+	done
 	
 	if [[ -n "$PackageBrew" ]]; then
 		if is_true "$ArgHoldEditor"; then
@@ -861,7 +869,7 @@ function brew ()
 		do
 			merge_packages "$Package"
 			mv "$KFWin64/$Package.u" "$KFPublishBrewedPC"
-			find "$MutSource/$Package" -type f -name '*.upk' -printf "%f\n" | xargs -I{} find "$KFPublishBrewedPC" -type f -name {} -delete
+			find "$MutSource/$Package" -type f -iname '*.upk' -not -ipath '*/Weapons/*' -printf "%f\n" | xargs -I{} find "$KFPublishBrewedPC" -type f -iname {} -delete
 		done
 	fi
 	
@@ -881,7 +889,9 @@ function publish_unpublished ()
 	for Package in $PackageUpload
 	do
 		cp -f "$KFUnpublishScript/$Package.u" "$KFPublishScript"
-		find "$MutSource/$Package" -type f -name '*.upk' -exec cp -f {} "$KFPublishPackages" \;
+		find "$MutSource/$Package" -type f -iname '*.upk' -not -ipath '*/Weapons/*' -exec cp -f {} "$KFPublishPackages" \;
+		find "$MutSource/$Package" -type d -iname 'WwiseAudio' -exec cp -rf {} "$KFPublishBrewedPC" \;
+		find "$MutSource/$Package" -type d -iname 'Weapons' -exec cp -rf {} "$KFPublishPackages" \;
 	done
 	
 	find "$KFPublish" -type d -empty -delete
