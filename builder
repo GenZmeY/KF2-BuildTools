@@ -721,14 +721,14 @@ function compile ()
 	msg "compilation"
 	
 	if is_true "$ArgHoldEditor"; then
-		CMD //C "$(cygpath -w "$KFEditor") make $StripSourceArg -useunpublished"
+		CMD //C "$(cygpath -w "$KFEditor")" make $StripSourceArg -useunpublished
 		parse_log "$(find_log)"
 		if ! compiled; then
 			die "compilation failed"
 		fi
 		msg "${GRN}successfully compiled${DEF}"
 	else
-		CMD //C "$(cygpath -w "$KFEditor") make $StripSourceArg -useunpublished" &
+		CMD //C "$(cygpath -w "$KFEditor")" make $StripSourceArg -useunpublished &
 		PID="$!"
 		while ps -p "$PID" &> /dev/null
 		do
