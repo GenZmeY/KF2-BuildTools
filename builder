@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (C) 2022 GenZmeY
+# Copyright (C) 2022-2023 GenZmeY
 # mailto: genzmey@gmail.com
 
 # This program is free software: you can redistribute it and/or modify
@@ -569,10 +569,14 @@ function merge_package () # $1: What, $2: Where
 	msg "merge $1 into $2"
 	
 	if is_true "$ArgHoldEditor"; then
-		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditorMergePackages") make $1 $2"
+		pushd "$KFWin64" &> /dev/null
+		CMD //C "$(basename "$KFEditorMergePackages")" make "$1" "$2"
+		popd &> /dev/null
 	else
 		ModificationTime="$(stat -c %y "$KFWin64/$2")"
-		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditorMergePackages") make $1 $2" &
+		pushd "$KFWin64" &> /dev/null
+		CMD //C "$(basename "$KFEditorMergePackages")" make "$1" "$2" &
+		popd &> /dev/null
 		PID="$!"
 		while ps -p "$PID" &> /dev/null
 		do
@@ -721,14 +725,14 @@ function compile ()
 	msg "compilation"
 	
 	if is_true "$ArgHoldEditor"; then
-		CMD //C "$(cygpath -w "$KFEditor")" make $StripSourceArg -useunpublished
+		CMD //C "$(cygpath -w "$KFEditor")" make "$StripSourceArg" -useunpublished
 		parse_log "$(find_log)"
 		if ! compiled; then
 			die "compilation failed"
 		fi
 		msg "${GRN}successfully compiled${DEF}"
 	else
-		CMD //C "$(cygpath -w "$KFEditor")" make $StripSourceArg -useunpublished &
+		CMD //C "$(cygpath -w "$KFEditor")" make "$StripSourceArg" -useunpublished &
 		PID="$!"
 		while ps -p "$PID" &> /dev/null
 		do
@@ -831,14 +835,14 @@ function brew ()
 	
 	if [[ -n "$PackageBrew" ]]; then
 		if is_true "$ArgHoldEditor"; then
-			CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditor") brewcontent -platform=PC $PackageBrew -useunpublished"
-			if ! brewed "$PackageBrew"; then
-				brew_cleanup
-				die "brewing failed"
-			fi
+			pushd "$KFWin64" &> /dev/null
+			CMD //C "$(basename "$KFEditor")" brewcontent -platform=PC "$PackageBrew" -useunpublished
+			popd &> /dev/null
 		else
-			CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditor") brewcontent -platform=PC $PackageBrew -useunpublished" &
+			pushd "$KFWin64" &> /dev/null
+			CMD //C "$(basename "$KFEditor")" brewcontent -platform=PC "$PackageBrew" -useunpublished &
 			PID="$!"
+			popd &> /dev/null
 			while ps -p "$PID" &> /dev/null
 			do
 				if brewed "$PackageBrew"; then
@@ -847,10 +851,10 @@ function brew ()
 				fi
 				sleep 1
 			done
-			if ! brewed "$PackageBrew"; then
-				brew_cleanup
-				die "brewing failed"
-			fi
+		fi
+		if ! brewed "$PackageBrew"; then
+			brew_cleanup
+			die "brewing failed"
 		fi
 	fi
 	
@@ -862,7 +866,9 @@ function brew ()
 		fi
 		
 		msg "patching $(basename "$KFEditor")"
-		CMD //C "cd /D $(cygpath -w "$KFWin64") && $(basename "$KFEditorPatcher")"
+		pushd "$KFWin64" &> /dev/null
+		CMD //C "$(basename "$KFEditorPatcher")"
+		popd &> /dev/null
 		msg "${GRN}successfully patched${DEF}"
 		
 		for Package in $PackagePeelzBrew
@@ -977,7 +983,7 @@ function run_test ()
 		msg "run test (unpublished)"
 	fi
 	
-	CMD //C "$(cygpath -w "$KFGame") $Map?Difficulty=$Difficulty?GameLength=$GameLength?Game=$Game?Mutator=$Mutators?$Args $UseUnpublished" -log
+	CMD //C "$(cygpath -w "$KFGame")" "$Map?Difficulty=$Difficulty?GameLength=$GameLength?Game=$Game?Mutator=$Mutators?$Args" "$UseUnpublished" -log
 }
 
 function parse_combined_params () # $1: Combined short parameters
