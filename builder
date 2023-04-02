@@ -128,7 +128,7 @@ function get_latest () # $1: Reponame, $2: filename, $3: output filename
 	msg "download $2 ($LatestTag)"
 	mkdir -p "$(dirname "$3")/"
 	curl -LJs "$DownloadUrl" -o "$3"
-	msg "${GRN}successfully downloaded${DEF}"
+	msg "successfully downloaded" "${GRN}"
 }
 
 function get_latest_multini () # $1: file to save
@@ -169,13 +169,13 @@ function err () # $1: String
 	fi
 }
 
-function msg () # $1: String
+function msg () # $1: String, $2: Color code (global)
 {
 	if ! is_true "$ArgQuiet"; then
 		if is_true "$ArgDebug"; then
-			echo -e "${BLU}${1-}${DEF}" >&1
+			echo -e "${BLU}${2-}${1-}${DEF}" >&1
 		else
-			echo -e "${DEF}${1-}${DEF}" >&1
+			echo -e "${DEF}${2-}${1-}${DEF}" >&1
 		fi
 	fi
 }
@@ -188,7 +188,7 @@ function die () # $1: String, $2: Exit code
 
 function warn () # $1: String
 {
-	msg "${YLW}${1-}${DEF}"
+	msg "${1-}" "${YLW}"
 }
 
 function usage ()
@@ -233,7 +233,7 @@ function version ()
 		Version="(standalone)"
 	fi
 
-	msg "${BLD}$ScriptName $Version${DEF}"
+	msg "$ScriptName $Version" "${BLD}"
 }
 
 function cleanup()
@@ -460,7 +460,7 @@ Mutators="$(print_list "$AviableMutators" ",")"
 # Additional parameters
 Args=""
 EOF
-		msg "${GRN}$(basename "$MutBuilderConfig") created${DEF}"
+		msg "$(basename "$MutBuilderConfig") created" "${GRN}"
 	fi
 	
 	if ! [[ -d "$MutPubContent" ]]; then mkdir -p "$MutPubContent"; fi
@@ -469,7 +469,7 @@ EOF
 	
 	if is_true "$ArgForce" || ! [[ -e "$MutPubContentTitle" ]]; then
 		echo "$ProjectName" > "$MutPubContentTitle"
-		msg "${GRN}$(basename "$MutPubContentTitle") created${DEF}"
+		msg "$(basename "$MutPubContentTitle") created" "${GRN}"
 	fi
 	
 	if is_true "$ArgForce" || ! [[ -e "$MutPubContentDescription" ]]; then
@@ -506,7 +506,7 @@ EOF
 		} >> "$MutPubContentDescription"
 		fi
 		
-		msg "${GRN}$(basename "$MutPubContentDescription") created${DEF}"
+		msg "$(basename "$MutPubContentDescription") created" "${GRN}"
 	fi
 	
 	if is_true "$ArgForce" || [[ "$(preview_extension)" == "None" ]]; then
@@ -515,7 +515,7 @@ EOF
 		else
 			printf '%b' "$DummyPreviewRaw" > "${MutPubContentPreview}.png"
 		fi
-		msg "${GRN}$(basename "${MutPubContentPreview}.png") created${DEF}"
+		msg "$(basename "${MutPubContentPreview}.png") created" "${GRN}"
 	fi
 	
 	if is_true "$ArgForce" || ! [[ -e "$MutPubContentTags" ]]; then
@@ -531,7 +531,7 @@ EOF
 			fi
 			echo "$PublicationTags" >> "$MutPubContentTags"
 		fi
-		msg "${GRN}$(basename "$MutPubContentTags") created${DEF}"
+		msg "$(basename "$MutPubContentTags") created" "${GRN}"
 	fi
 }
 
@@ -725,21 +725,21 @@ function compile ()
 	msg "compilation"
 	
 	if is_true "$ArgHoldEditor"; then
-		CMD //C "$(cygpath -w "$KFEditor")" make "$StripSourceArg" -useunpublished
+		CMD //C "$(cygpath -w "$KFEditor")" make $StripSourceArg -useunpublished
 		parse_log "$(find_log)"
 		if ! compiled; then
 			die "compilation failed"
 		fi
-		msg "${GRN}successfully compiled${DEF}"
+		msg "successfully compiled" "${GRN}"
 	else
-		CMD //C "$(cygpath -w "$KFEditor")" make "$StripSourceArg" -useunpublished &
+		CMD //C "$(cygpath -w "$KFEditor")" make $StripSourceArg -useunpublished &
 		PID="$!"
 		while ps -p "$PID" &> /dev/null
 		do
 			sleep 1
 			Logfile="$(find_log)"
 			if compiled; then
-				msg "${GRN}successfully compiled${DEF}"
+				msg "successfully compiled" "${GRN}"
 				
 				msg "wait for the log"
 				while ! grep -qF 'Log file closed' "$Logfile"
@@ -869,7 +869,7 @@ function brew ()
 		pushd "$KFWin64" &> /dev/null
 		CMD //C "$(basename "$KFEditorPatcher")"
 		popd &> /dev/null
-		msg "${GRN}successfully patched${DEF}"
+		msg "successfully patched" "${GRN}"
 		
 		for Package in $PackagePeelzBrew
 		do
@@ -879,7 +879,7 @@ function brew ()
 		done
 	fi
 	
-	msg "${GRN}successfully brewed${DEF}"
+	msg "successfully brewed" "${GRN}"
 	
 	rm -f "$KFPublishBrewedPC"/*.tmp
 	
@@ -964,7 +964,7 @@ EOF
 	rm -f "$MutWsInfo"
 	
 	if is_true "$Success"; then
-		msg "${GRN}successfully uploaded to steam workshop${DEF}"
+		msg "successfully uploaded to steam workshop" "${GRN}"
 	else
 		die "upload to steam workshop failed" 2
 	fi
