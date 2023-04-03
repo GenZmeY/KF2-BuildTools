@@ -63,8 +63,10 @@ SteamLibFoldersVdf="$SteamPath/steamapps/libraryfolders.vdf"
 
 # Usefull KF2 executables / Paths / Configs
 KFDoc="$DocumentsPath/My Games/KillingFloor2"
-KFPath="$(steamlib_by_steamid "232090")/steamapps/common/killingfloor2"
-KFSDKPath="$(steamlib_by_steamid "232150")/steamapps/common/killingfloor2"
+KFSteamLibraryFolder="$(steamlib_by_steamid "232090")"
+KFSDKSteamLibraryFolder="$(steamlib_by_steamid "232150")"
+KFPath="$KFSteamLibraryFolder/steamapps/common/killingfloor2"
+KFSDKPath="$KFSDKSteamLibraryFolder/steamapps/common/killingfloor2"
 KFDev="$KFSDKPath/Development/Src"
 KFWin64="$KFSDKPath/Binaries/Win64"
 KFEditor="$KFWin64/KFEditor.exe"
@@ -1067,7 +1069,17 @@ function main ()
 	export PATH="$PATH:$ThirdPartyBin"
 	
 	# Checks
-	if [[ "$KFPath" != "$KFSDKPath" ]]; then
+	if [[ -z "$KFSteamLibraryFolder" ]]; then
+		err "\"Killing Floor 2\" not found"
+	fi
+	
+	if [[ -z "$KFSDKSteamLibraryFolder" ]]; then
+		err "\"Killing Floor 2 - SDK\" not found"
+	fi
+	
+	if [[ -z "$KFSteamLibraryFolder" ]] || [[ -z "$KFSDKSteamLibraryFolder" ]]; then
+		die "" 1
+	elif [[ "$KFPath" != "$KFSDKPath" ]]; then
 		warn "\"Killing Floor 2\" and \"Killing Floor 2 - SDK\" installed in different steam library folders."
 		warn "If you get errors, install them in the same steam library folder."
 	fi
