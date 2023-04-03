@@ -34,6 +34,32 @@ function reg_readkey () # $1: path, $2: key
 	fi
 }
 
+function steamlib_by_steamid () # $1: SteamID
+{
+	local Path
+	
+	if ! [[ -f "$SteamLibFoldersVdf" ]]; then
+		return
+	fi
+	
+	while read -r Line
+	do
+		if echo "$Line" | grep -Foq '"path"'; then
+			Path="$(echo "$Line" | sed -r 's|^\s*\"path\"\s*||' | sed 's|"||g')"
+		fi
+		if echo "$Line" | grep -Poq "^\s*\"${1}\"\s*\"\d+\"$"; then
+			wrapped_cygpath --unix "$Path"
+		fi
+	done < "$SteamLibFoldersVdf"
+}
+
+function wrapped_cygpath () # $@: Params
+{
+	if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
+		cygpath "$@"
+	fi
+}
+
 # Whoami
 ScriptFullname="$(readlink -e "$0")"
 ScriptName="$(basename "$0")"
@@ -41,19 +67,23 @@ ScriptDir="$(dirname "$ScriptFullname")"
 
 # Common
 SteamPath="$(reg_readkey "HKCU\Software\Valve\Steam" "SteamPath")"
-DocumentsPath="$(reg_readkey "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" "Personal")"
+DocumentsPath="$(wrapped_cygpath --mydocs)"
 ThirdPartyBin="$ScriptDir/3rd-party-bin"
 DummyPreview="$ScriptDir/dummy_preview.png"
+SteamLibFoldersVdf="$SteamPath/steamapps/libraryfolders.vdf"
 
 # Usefull KF2 executables / Paths / Configs
 KFDoc="$DocumentsPath/My Games/KillingFloor2"
-KFPath="$SteamPath/steamapps/common/killingfloor2"
-KFDev="$KFPath/Development/Src"
-KFWin64="$KFPath/Binaries/Win64"
+KFSteamLibraryFolder="$(steamlib_by_steamid "232090")"
+KFSDKSteamLibraryFolder="$(steamlib_by_steamid "232150")"
+KFPath="$KFSteamLibraryFolder/steamapps/common/killingfloor2"
+KFSDKPath="$KFSDKSteamLibraryFolder/steamapps/common/killingfloor2"
+KFDev="$KFSDKPath/Development/Src"
+KFWin64="$KFSDKPath/Binaries/Win64"
 KFEditor="$KFWin64/KFEditor.exe"
 KFEditorPatcher="$KFWin64/kfeditor_patcher.exe"
 KFEditorMergePackages="$KFWin64/KFEditor_mergepackages.exe"
-KFGame="$KFWin64/KFGame.exe"
+KFGame="$KFPath/Binaries/Win64/KFGame.exe"
 KFWorkshop="$KFPath/Binaries/WorkshopUserTool.exe"
 KFUnpublish="$KFDoc/KFGame/Unpublished"
 KFPublish="$KFDoc/KFGame/Published"
@@ -931,6 +961,11 @@ function upload ()
 		warn "The size of $(basename "$Preview") is greater than 1mb. Steam may prevent you from loading content with this image. if you get an error while loading - try using a smaller preview."
 	fi
 	
+	if grep -Fq '"' "$MutPubContentDescription"; then
+		warn "Double quotes (\") found in $(basename "$MutPubContentDescription"), this may prevent the item from being uploaded to the workshop"
+		warn "Remove double quotes if there are problems uploading to the workshop"
+	fi
+	
 	find "$KFPublish" -type d -empty -delete
 	
 	# it's a bad idea to use the $KFPublish folder for upload
@@ -1056,6 +1091,22 @@ function main ()
 	if is_true "$ArgVersion" && is_true "$ArgHelp"; then version; usage; die "" 0; fi
 	if is_true "$ArgVersion";                       then version;        die "" 0; fi
 	if is_true "$ArgHelp";                          then usage;          die "" 0; fi
+	
+	# Checks
+	if [[ -z "$KFSteamLibraryFolder" ]]; then
+		err "\"Killing Floor 2\" not found"
+	fi
+	
+	if [[ -z "$KFSDKSteamLibraryFolder" ]]; then
+		err "\"Killing Floor 2 - SDK\" not found"
+	fi
+	
+	if [[ -z "$KFSteamLibraryFolder" ]] || [[ -z "$KFSDKSteamLibraryFolder" ]]; then
+		die "" 1
+	elif [[ "$KFPath" != "$KFSDKPath" ]]; then
+		warn "\"Killing Floor 2\" and \"Killing Floor 2 - SDK\" installed in different steam library folders."
+		warn "If you get errors, install them in the same steam library folder."
+	fi
 	
 	# Backup
 	if is_true "$ArgCompile" || is_true "$ArgBrew"; then backup_kfeditorconf;      fi
