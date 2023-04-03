@@ -38,15 +38,26 @@ function steamlib_by_steamid () # $1: SteamID
 {
 	local Path
 	
+	if ! [[ -f "$SteamLibFoldersVdf" ]]; then
+		return
+	fi
+	
 	while read -r Line
 	do
 		if echo "$Line" | grep -Foq '"path"'; then
 			Path="$(echo "$Line" | sed -r 's|^\s*\"path\"\s*||' | sed 's|"||g')"
 		fi
 		if echo "$Line" | grep -Poq "^\s*\"${1}\"\s*\"\d+\"$"; then
-			cygpath --unix "$Path"
+			wrapped_cygpath --unix "$Path"
 		fi
 	done < "$SteamLibFoldersVdf"
+}
+
+function wrapped_cygpath () # $@: Params
+{
+	if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
+		cygpath "$@"
+	fi
 }
 
 # Whoami
@@ -56,7 +67,7 @@ ScriptDir="$(dirname "$ScriptFullname")"
 
 # Common
 SteamPath="$(reg_readkey "HKCU\Software\Valve\Steam" "SteamPath")"
-DocumentsPath="$(cygpath --mydocs)"
+DocumentsPath="$(wrapped_cygpath --mydocs)"
 ThirdPartyBin="$ScriptDir/3rd-party-bin"
 DummyPreview="$ScriptDir/dummy_preview.png"
 SteamLibFoldersVdf="$SteamPath/steamapps/libraryfolders.vdf"
