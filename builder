@@ -950,6 +950,11 @@ function upload ()
 		warn "The size of $(basename "$Preview") is greater than 1mb. Steam may prevent you from loading content with this image. if you get an error while loading - try using a smaller preview."
 	fi
 	
+	if grep -Fq '"' "$MutPubContentDescription"; then
+		warn "Double quotes (\") found in $(basename "$MutPubContentDescription"), this may prevent the item from being uploaded to the workshop"
+		warn "Remove double quotes if there are problems uploading to the workshop"
+	fi
+	
 	find "$KFPublish" -type d -empty -delete
 	
 	# it's a bad idea to use the $KFPublish folder for upload
