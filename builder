@@ -41,7 +41,7 @@ ScriptDir="$(dirname "$ScriptFullname")"
 
 # Common
 SteamPath="$(reg_readkey "HKCU\Software\Valve\Steam" "SteamPath")"
-DocumentsPath="$(reg_readkey "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" "Personal")"
+DocumentsPath="$(cygpath --mydocs)"
 ThirdPartyBin="$ScriptDir/3rd-party-bin"
 DummyPreview="$ScriptDir/dummy_preview.png"
 
