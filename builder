@@ -1084,6 +1084,14 @@ function main ()
 	setup_colors
 	export PATH="$PATH:$ThirdPartyBin"
 	
+	# Modifiers
+	if is_true "$ArgDebug";                         then set -o xtrace;            fi
+	
+	# Help
+	if is_true "$ArgVersion" && is_true "$ArgHelp"; then version; usage; die "" 0; fi
+	if is_true "$ArgVersion";                       then version;        die "" 0; fi
+	if is_true "$ArgHelp";                          then usage;          die "" 0; fi
+	
 	# Checks
 	if [[ -z "$KFSteamLibraryFolder" ]]; then
 		err "\"Killing Floor 2\" not found"
@@ -1099,14 +1107,6 @@ function main ()
 		warn "\"Killing Floor 2\" and \"Killing Floor 2 - SDK\" installed in different steam library folders."
 		warn "If you get errors, install them in the same steam library folder."
 	fi
-	
-	# Modifiers
-	if is_true "$ArgDebug";                         then set -o xtrace;            fi
-	
-	# Help
-	if is_true "$ArgVersion" && is_true "$ArgHelp"; then version; usage; die "" 0; fi
-	if is_true "$ArgVersion";                       then version;        die "" 0; fi
-	if is_true "$ArgHelp";                          then usage;          die "" 0; fi
 	
 	# Backup
 	if is_true "$ArgCompile" || is_true "$ArgBrew"; then backup_kfeditorconf;      fi
