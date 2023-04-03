@@ -34,6 +34,21 @@ function reg_readkey () # $1: path, $2: key
 	fi
 }
 
+function steamlib_by_steamid () # $1: SteamID
+{
+	local Path
+	
+	while read -r Line
+	do
+		if echo "$Line" | grep -Foq '"path"'; then
+			Path="$(echo "$Line" | sed -r 's|^\s*\"path\"\s*||' | sed 's|"||g')"
+		fi
+		if echo "$Line" | grep -Poq "^\s*\"${1}\"\s*\"\d+\"$"; then
+			cygpath --unix "$Path"
+		fi
+	done < "$SteamLibFoldersVdf"
+}
+
 # Whoami
 ScriptFullname="$(readlink -e "$0")"
 ScriptName="$(basename "$0")"
@@ -44,16 +59,18 @@ SteamPath="$(reg_readkey "HKCU\Software\Valve\Steam" "SteamPath")"
 DocumentsPath="$(cygpath --mydocs)"
 ThirdPartyBin="$ScriptDir/3rd-party-bin"
 DummyPreview="$ScriptDir/dummy_preview.png"
+SteamLibFoldersVdf="$SteamPath/steamapps/libraryfolders.vdf"
 
 # Usefull KF2 executables / Paths / Configs
 KFDoc="$DocumentsPath/My Games/KillingFloor2"
-KFPath="$SteamPath/steamapps/common/killingfloor2"
-KFDev="$KFPath/Development/Src"
-KFWin64="$KFPath/Binaries/Win64"
+KFPath="$(steamlib_by_steamid "232090")/steamapps/common/killingfloor2"
+KFSDKPath="$(steamlib_by_steamid "232150")/steamapps/common/killingfloor2"
+KFDev="$KFSDKPath/Development/Src"
+KFWin64="$KFSDKPath/Binaries/Win64"
 KFEditor="$KFWin64/KFEditor.exe"
 KFEditorPatcher="$KFWin64/kfeditor_patcher.exe"
 KFEditorMergePackages="$KFWin64/KFEditor_mergepackages.exe"
-KFGame="$KFWin64/KFGame.exe"
+KFGame="$KFPath/Binaries/Win64/KFGame.exe"
 KFWorkshop="$KFPath/Binaries/WorkshopUserTool.exe"
 KFUnpublish="$KFDoc/KFGame/Unpublished"
 KFPublish="$KFDoc/KFGame/Published"
@@ -1048,6 +1065,12 @@ function main ()
 	parse_params "$@"
 	setup_colors
 	export PATH="$PATH:$ThirdPartyBin"
+	
+	# Checks
+	if [[ "$KFPath" != "$KFSDKPath" ]]; then
+		warn "\"Killing Floor 2\" and \"Killing Floor 2 - SDK\" installed in different steam library folders."
+		warn "If you get errors, install them in the same steam library folder."
+	fi
 	
 	# Modifiers
 	if is_true "$ArgDebug";                         then set -o xtrace;            fi
