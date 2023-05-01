@@ -1018,7 +1018,7 @@ function run_test ()
 		msg "run test (unpublished)"
 	fi
 	
-	CMD //C "$(cygpath -w "$KFGame")" "$Map?Difficulty=$Difficulty?GameLength=$GameLength?Game=$Game?Mutator=$Mutators?$Args" "$UseUnpublished" -log
+	CMD //C "$(cygpath -w "$KFGame")" "$Map?Difficulty=$Difficulty?GameLength=$GameLength?Game=$Game?Mutator=$Mutators?$Args" $UseUnpublished -log
 }
 
 function parse_combined_params () # $1: Combined short parameters
