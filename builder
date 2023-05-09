@@ -37,11 +37,11 @@ function reg_readkey () # $1: path, $2: key
 function steamlib_by_steamid () # $1: SteamID
 {
 	local Path
-	
+
 	if ! [[ -f "$SteamLibFoldersVdf" ]]; then
 		return
 	fi
-	
+
 	while read -r Line
 	do
 		if echo "$Line" | grep -Foq '"path"'; then
@@ -154,7 +154,7 @@ function get_latest () # $1: Reponame, $2: filename, $3: output filename
 	local LatestTag=""
 	LatestTag="$(curl --silent "$ApiUrl" | grep -Po '"tag_name": "\K.*?(?=")')"
 	local DownloadUrl="https://github.com/$1/releases/download/$LatestTag/$2"
-	
+
 	msg "download $2 ($LatestTag)"
 	mkdir -p "$(dirname "$3")/"
 	curl -LJs "$DownloadUrl" -o "$3"
@@ -176,7 +176,7 @@ function repo_url () # $1: remote.origin.url
 	if echo "$1" | grep -qoP '^https?://'; then
 		echo "$1" | sed -r 's|\.git||'
 	else
-		echo "$1" | sed -r 's|^.+:(.+)\.git$|https://github.com/\1|' 
+		echo "$1" | sed -r 's|^.+:(.+)\.git$|https://github.com/\1|'
 	fi
 }
 
@@ -224,7 +224,7 @@ function warn () # $1: String
 function usage ()
 {
 	local HelpMessage=""
-	
+
 	HelpMessage="$(cat <<EOF
 ${BLD}Usage:${DEF} $0 OPTIONS
 
@@ -257,7 +257,7 @@ EOF
 function version ()
 {
 	local Version=""
-	
+
 	Version="$(git describe 2> /dev/null)"
 	if [[ -z "$Version" ]]; then
 		Version="(standalone)"
@@ -309,7 +309,7 @@ function init ()
 	local DefMap=""
 	local BaseList=""
 	local BaseListNext=""
-	
+
 	if [[ -e "$MutBuilderConfig" ]]; then
 		if is_true "$ArgForce"; then
 			msg "rewriting $(basename "$MutBuilderConfig")"
@@ -317,7 +317,7 @@ function init ()
 	else
 		msg "creating new $(basename "$MutBuilderConfig")"
 	fi
-	
+
 	if [[ -d "$MutBrewedPCAddon" ]]; then
 		while read -r Map
 		do
@@ -338,14 +338,14 @@ function init ()
 			PackageList="$PackageList $Package"
 		fi
 	done < <(find "$MutSource" -mindepth 2 -maxdepth 2 -type d -ipath '*/Classes' | sed -r 's|.+/([^/]+)/[^/]+|\1|' | sort)
-	
+
 	if [[ -n "$PackageList" ]]; then
 		msg "packages found: $(print_list "$PackageList" ", ")"
 	fi
-	
+
 	# DISCLAMER: BigO nightmare (*)
 	# Remove seniors with a weak psyche from the screen
-	# 
+	#
 	# (*) As planned though:
 	# Initialized once and quickly even on large projects,
 	# There is no point in optimizing this
@@ -377,7 +377,7 @@ function init ()
 			BaseList="$BaseListNext"
 			BaseListNext=""
 		done
-		
+
 		# find available gamemodes
 		BaseList='KFGameInfo_'
 		BaseListNext=''
@@ -409,23 +409,23 @@ function init ()
 			BaseListNext=""
 		done
 	fi
-	
+
 	if [[ -n "$AviableMutators" ]]; then
 		msg "mutators found: $(print_list "$AviableMutators" ", ")"
 	fi
-	
+
 	if [[ -z "$AviableGamemodes" ]]; then
 		DefGamemode="KFGameContent.KFGameInfo_Survival"
 	else
 		msg "custom gamemodes found: $(print_list "$AviableGamemodes" ", ")"
 	fi
-	
+
 	if [[ -z "$AviableMaps" ]]; then
 		DefMap="KF-Nuked"
 	else
 		msg "maps found: $(print_list "$AviableMaps" ", ")"
 	fi
-	
+
 	if is_true "$ArgForce" || ! [[ -e "$MutBuilderConfig" ]]; then
 		cat > "$MutBuilderConfig" <<EOF
 ### Build parameters ###
@@ -437,7 +437,7 @@ StripSource="True"
 
 # Mutators to be compiled
 # Specify them with a space as a separator,
-# Mutators will be compiled in the specified order 
+# Mutators will be compiled in the specified order
 PackageBuildOrder="$PackageList"
 
 
@@ -446,7 +446,7 @@ PackageBuildOrder="$PackageList"
 # Packages you want to brew using @peelz's patched KFEditor.
 # Useful for cases where regular brew doesn't put *.upk inside the package.
 # Specify them with a space as a separator,
-# The order doesn't matter 
+# The order doesn't matter
 PackagePeelzBrew=""
 
 
@@ -454,7 +454,7 @@ PackagePeelzBrew=""
 
 # Mutators that will be uploaded to the workshop
 # Specify them with a space as a separator,
-# The order doesn't matter 
+# The order doesn't matter
 PackageUpload="$PackageList"
 
 
@@ -492,16 +492,16 @@ Args=""
 EOF
 		msg "$(basename "$MutBuilderConfig") created" "${GRN}"
 	fi
-	
+
 	if ! [[ -d "$MutPubContent" ]]; then mkdir -p "$MutPubContent"; fi
-	
+
 	ProjectName="$(basename "$(readlink -e "$MutSource")")"
-	
+
 	if is_true "$ArgForce" || ! [[ -e "$MutPubContentTitle" ]]; then
 		echo "$ProjectName" > "$MutPubContentTitle"
 		msg "$(basename "$MutPubContentTitle") created" "${GRN}"
 	fi
-	
+
 	if is_true "$ArgForce" || ! [[ -e "$MutPubContentDescription" ]]; then
 		:> "$MutPubContentDescription"
 		if [[ -n "$AviableGamemodes" ]] || [[ -n "$AviableMutators" ]] || [[ -n "$AviableMaps" ]]; then
@@ -517,7 +517,7 @@ EOF
 			fi
 			echo "" >> "$MutPubContentDescription"
 		fi
-		
+
 		GitRemoteUrl="$(repo_url "$(git config --get remote.origin.url)")"
 		if [[ -n "$GitRemoteUrl" ]]; then
 		{
@@ -526,7 +526,7 @@ EOF
 			echo ""
 		} >> "$MutPubContentDescription"
 		fi
-		
+
 		GitUsername="$(git config --get user.name)"
 		if [[ -n "$GitUsername" ]]; then
 		{
@@ -535,10 +535,10 @@ EOF
 			echo ""
 		} >> "$MutPubContentDescription"
 		fi
-		
+
 		msg "$(basename "$MutPubContentDescription") created" "${GRN}"
 	fi
-	
+
 	if is_true "$ArgForce" || [[ "$(preview_extension)" == "None" ]]; then
 		if [[ -e "$DummyPreview" ]]; then
 			cp -f "$DummyPreview" "${MutPubContentPreview}.png"
@@ -547,7 +547,7 @@ EOF
 		fi
 		msg "$(basename "${MutPubContentPreview}.png") created" "${GRN}"
 	fi
-	
+
 	if is_true "$ArgForce" || ! [[ -e "$MutPubContentTags" ]]; then
 		:> "$MutPubContentTags"
 		if [[ -n "$AviableGamemodes" ]]; then
@@ -574,14 +574,14 @@ function preview_extension ()
 			return 0
 		fi
 	done
-	
+
 	echo "None"
 }
 
 function read_settings ()
 {
 	if ! [[ -f "$MutBuilderConfig" ]]; then init; fi
-	
+
 	if bash -n "$MutBuilderConfig"; then
 		# shellcheck source=./.shellcheck/builder.cfg
 		source "$MutBuilderConfig"
@@ -595,9 +595,9 @@ function merge_package () # $1: What, $2: Where
 	local ModificationTime=""
 	local ModificationTimeNew=""
 	local PID=""
-	
+
 	msg "merge $1 into $2"
-	
+
 	if is_true "$ArgHoldEditor"; then
 		pushd "$KFWin64" &> /dev/null
 		CMD //C "$(basename "$KFEditorMergePackages")" make "$1" "$2"
@@ -627,16 +627,16 @@ function merge_package () # $1: What, $2: Where
 			sleep 1
 		done
 	fi
-	
+
 	rm -f "$KFWin64/$1" # cleanup (manual)
 }
 
 function merge_packages () # $1: Mutator name
 {
 	msg "merge packages for $1.u"
-	
+
 	cp -f "$KFUnpublishScript/$1.u" "$KFWin64"
-	
+
 	while read -r Upk
 	do
 		cp -f "$Upk" "$KFWin64"
@@ -653,7 +653,7 @@ function parse_log () # $1: Logfile
 	local Message=''
 
 	local I=1
-	if grep -qP ' Error:(.+:)? Error, ' "$1"; then # check to prevent a very strange crash 
+	if grep -qP ' Error:(.+:)? Error, ' "$1"; then # check to prevent a very strange crash
 		while read -r Error
 		do
 			if [[ -z "$Error" ]]; then break; fi
@@ -670,7 +670,7 @@ function parse_log () # $1: Logfile
 			((I+=1))
 		done < <(grep -P ' Error:(.+:)? Error, ' "$1")
 	fi
-	
+
 	if grep -qP ' Warning:(.+:)? Warning, ' "$1"; then # and here too
 		while read -r Warning
 		do
@@ -711,49 +711,49 @@ function compile ()
 	local StripSourceArg=""
 	local PID=""
 	local Logfile=""
-	
+
 	read_settings
 
 	if ! command -v multini &> /dev/null; then
 		get_latest_multini "$ThirdPartyBin/multini.exe"
 	fi
-	
+
 	if [[ -z "$PackageBuildOrder" ]]; then
 		die "No packages found! Check project filesystem, fix config and try again"
 	fi
-	
+
 	multini --del "$KFEditorConf" 'ModPackages' 'ModPackages'
 	for Package in $PackageBuildOrder
 	do
 		multini --add "$KFEditorConf" 'ModPackages' 'ModPackages' "$Package"
 	done
 	multini --set "$KFEditorConf" 'ModPackages' 'ModPackagesInPath' "$(cygpath -w "$MutSource")"
-	
+
 	rm -rf "$KFUnpublish" "$KFPublish"
-	
+
 	mkdir -p "$KFUnpublishPackages" "$KFUnpublishScript"
-	
+
 	for Package in $PackageBuildOrder
 	do
 		find "$MutSource/$Package" -type f -iname '*.upk' -not -ipath "*/Weapons/*" -exec cp -f {} "$KFUnpublishPackages" \;
 		find "$MutSource/$Package" -type d -iname 'WwiseAudio' -exec cp -rf {} "$KFUnpublishBrewedPC" \;
 		find "$MutSource/$Package" -type d -iname 'Weapons' -exec cp -rf {} "$KFUnpublishPackages" \;
 	done
-	
+
 	if [[ -d "$MutLocalization" ]]; then
 		mkdir -p "$KFUnpublishLocalization"
 		cp -rf "$MutLocalization"/* "$KFUnpublishLocalization"
 	fi
-	
+
 	if [[ -d "$MutConfig" ]]; then
 		mkdir -p "$KFUnpublishConfig"
 		cp -rf "$MutConfig"/* "$KFUnpublishConfig"
 	fi
-	
+
 	if is_true "$StripSource"; then StripSourceArg="-stripsource"; fi
-	
+
 	msg "compilation"
-	
+
 	if is_true "$ArgHoldEditor"; then
 		CMD //C "$(cygpath -w "$KFEditor")" make $StripSourceArg -useunpublished
 		parse_log "$(find_log)"
@@ -770,7 +770,7 @@ function compile ()
 			Logfile="$(find_log)"
 			if compiled; then
 				msg "successfully compiled" "${GRN}"
-				
+
 				msg "wait for the log"
 				while ! grep -qF 'Log file closed' "$Logfile"
 				do
@@ -786,7 +786,7 @@ function compile ()
 			fi
 		done
 	fi
-	
+
 	find "$KFUnpublish" -type d -empty -delete
 }
 
@@ -796,12 +796,12 @@ function publish_common ()
 		mkdir -p "$KFPublishLocalization"
 		cp -rf "$MutLocalization"/* "$KFPublishLocalization"
 	fi
-	
+
 	if [[ -d "$MutConfig" ]]; then
 		mkdir -p "$KFPublishConfig"
 		cp -rf "$MutConfig"/* "$KFPublishConfig"
 	fi
-	
+
 	if [[ -d "$MutBrewedPCAddon" ]]; then
 		mkdir -p "$KFPublishBrewedPC"
 		cp -rf "$MutBrewedPCAddon"/* "$KFPublishBrewedPC"
@@ -833,15 +833,15 @@ function brew ()
 {
 	local PackageBrew=""
 	local PID=""
-	
+
 	msg "brewing"
-	
+
 	read_settings
-	
+
 	if ! compiled; then
 		die "You must compile packages before brewing. Use --compile option for this." 2
 	fi
-	
+
 	if [[ -z "$PackagePeelzBrew" ]]; then
 		PackageBrew="$PackageBuildOrder"
 	else
@@ -852,17 +852,17 @@ function brew ()
 			fi
 		done
 	fi
-	
+
 	rm -rf "$KFPublish"
-	
+
 	mkdir -p "$KFPublishBrewedPC" "$KFPublishPackages"
-	
+
 	for Package in $PackageBuildOrder
 	do
 		find "$MutSource/$Package" -type d -iname 'WwiseAudio' -exec cp -rf {} "$KFPublishBrewedPC" \;
 		find "$MutSource/$Package" -type d -iname 'Weapons' -exec cp -rf {} "$KFPublishPackages" \;
 	done
-	
+
 	if [[ -n "$PackageBrew" ]]; then
 		if is_true "$ArgHoldEditor"; then
 			pushd "$KFWin64" &> /dev/null
@@ -887,20 +887,20 @@ function brew ()
 			die "brewing failed"
 		fi
 	fi
-	
+
 	if [[ -n "$PackagePeelzBrew" ]]; then
 		msg "peelz brewing"
-		
+
 		if ! [[ -x "$KFEditorPatcher" ]]; then
 			get_latest_kfeditor_patcher "$KFEditorPatcher"
 		fi
-		
+
 		msg "patching $(basename "$KFEditor")"
 		pushd "$KFWin64" &> /dev/null
 		CMD //C "$(basename "$KFEditorPatcher")"
 		popd &> /dev/null
 		msg "successfully patched" "${GRN}"
-		
+
 		for Package in $PackagePeelzBrew
 		do
 			merge_packages "$Package"
@@ -908,20 +908,20 @@ function brew ()
 			find "$MutSource/$Package" -type f -iname '*.upk' -not -ipath '*/Weapons/*' -printf "%f\n" | xargs -I{} find "$KFPublishBrewedPC" -type f -iname {} -delete
 		done
 	fi
-	
+
 	msg "successfully brewed" "${GRN}"
-	
+
 	rm -f "$KFPublishBrewedPC"/*.tmp
-	
+
 	find "$KFPublish" -type d -empty -delete
 }
 
 function publish_unpublished ()
 {
 	warn "uploading without brewing${DEF}"
-	
+
 	mkdir -p "$KFPublishBrewedPC" "$KFPublishScript" "$KFPublishPackages"
-		
+
 	for Package in $PackageUpload
 	do
 		cp -f "$KFUnpublishScript/$Package.u" "$KFPublishScript"
@@ -929,7 +929,7 @@ function publish_unpublished ()
 		find "$MutSource/$Package" -type d -iname 'WwiseAudio' -exec cp -rf {} "$KFPublishBrewedPC" \;
 		find "$MutSource/$Package" -type d -iname 'Weapons' -exec cp -rf {} "$KFPublishPackages" \;
 	done
-	
+
 	find "$KFPublish" -type d -empty -delete
 }
 
@@ -938,36 +938,36 @@ function upload ()
 	local PreparedWsDir=""
 	local Preview=""
 	local Success="False"
-	
+
 	read_settings
-	
+
 	if ! compiled && ! test -d "$MutBrewedPCAddon"; then
 		die "You must compile packages before uploading. Use --compile option for this." 2
 	fi
-	
+
 	if [[ -d "$KFPublish" ]]; then
 		brew_cleanup
 	elif [[ -d "$KFUnpublish" ]]; then
 		publish_unpublished
 	fi
-	
+
 	publish_common
-	
+
 	Preview="${MutPubContentPreview}.$(preview_extension)"
-	
+
 	if ! [[ -e "$Preview" ]]; then
 		die "No preview image in PublicationContent" 2
 	elif [[ $(stat --printf="%s" "$Preview") -ge 1048576 ]]; then
 		warn "The size of $(basename "$Preview") is greater than 1mb. Steam may prevent you from loading content with this image. if you get an error while loading - try using a smaller preview."
 	fi
-	
+
 	if grep -Fq '"' "$MutPubContentDescription"; then
 		warn "Double quotes (\") found in $(basename "$MutPubContentDescription"), this may prevent the item from being uploaded to the workshop"
 		warn "Remove double quotes if there are problems uploading to the workshop"
 	fi
-	
+
 	find "$KFPublish" -type d -empty -delete
-	
+
 	# it's a bad idea to use the $KFPublish folder for upload
 	# because in that case some files won't get uploaded to the workshop for some reason
 	# so create a temporary folder to get around this
@@ -981,9 +981,9 @@ function upload ()
 \$MicroTxItem "false"
 \$PackageDirectory "$(cygpath -w "$PreparedWsDir")"
 EOF
-	
+
 	cp -rf "$KFPublish" "$PreparedWsDir"
-	
+
 	msg "upload to steam workshop"
 	while read -r Output
 	do
@@ -994,10 +994,10 @@ EOF
 			err "UploadTool: $Output"
 		fi
 	done < <("$KFWorkshop" "$(basename "$MutWsInfo")" 2>&1)
-	
+
 	rm -rf "$PreparedWsDir"
 	rm -f "$MutWsInfo"
-	
+
 	if is_true "$Success"; then
 		msg "successfully uploaded to steam workshop" "${GRN}"
 	else
@@ -1008,16 +1008,16 @@ EOF
 function run_test ()
 {
 	local UseUnpublished=""
-	
+
 	read_settings
-	
+
 	if brewed "$PackageBuildOrder"; then
 		msg "run test (brewed)"
 	else
 		UseUnpublished="-useunpublished"
 		msg "run test (unpublished)"
 	fi
-	
+
 	CMD //C "$(cygpath -w "$KFGame")" "$Map?Difficulty=$Difficulty?GameLength=$GameLength?Game=$Game?Mutator=$Mutators?$Args" $UseUnpublished -log
 }
 
@@ -1026,7 +1026,7 @@ function parse_combined_params () # $1: Combined short parameters
 	local Param="${1}"
 	local Length="${#Param}"
 	local Position=1
-	
+
 	while true
 	do
 		if [[ "$Position" -ge "$Length" ]]; then break; fi
@@ -1034,7 +1034,7 @@ function parse_combined_params () # $1: Combined short parameters
 			he ) ((Position+=2)); ArgHoldEditor="true"               ;;
 			nc ) ((Position+=2)); ArgNoColors="true"                 ;;
 		esac
-		
+
 		if [[ "$Position" -ge "$Length" ]]; then break; fi
 		case "${Param:$Position:1}" in
 			h  ) ((Position+=1)); ArgHelp="true"                     ;;
@@ -1083,41 +1083,41 @@ function main ()
 	parse_params "$@"
 	setup_colors
 	export PATH="$PATH:$ThirdPartyBin"
-	
+
 	# Modifiers
 	if is_true "$ArgDebug";                         then set -o xtrace;            fi
-	
+
 	# Help
 	if is_true "$ArgVersion" && is_true "$ArgHelp"; then version; usage; die "" 0; fi
 	if is_true "$ArgVersion";                       then version;        die "" 0; fi
 	if is_true "$ArgHelp";                          then usage;          die "" 0; fi
-	
+
 	# Checks
 	if [[ -z "$KFSteamLibraryFolder" ]]; then
 		err "\"Killing Floor 2\" not found"
 	fi
-	
+
 	if [[ -z "$KFSDKSteamLibraryFolder" ]]; then
 		err "\"Killing Floor 2 - SDK\" not found"
 	fi
-	
+
 	if [[ -z "$KFSteamLibraryFolder" ]] || [[ -z "$KFSDKSteamLibraryFolder" ]]; then
 		die "" 1
 	elif [[ "$KFPath" != "$KFSDKPath" ]]; then
 		warn "\"Killing Floor 2\" and \"Killing Floor 2 - SDK\" installed in different steam library folders."
 		warn "If you get errors, install them in the same steam library folder."
 	fi
-	
+
 	# Backup
 	if is_true "$ArgCompile" || is_true "$ArgBrew"; then backup_kfeditorconf;      fi
-	
+
 	# Actions
 	if is_true "$ArgInit";                          then init;                     fi
 	if is_true "$ArgCompile";                       then compile;                  fi
 	if is_true "$ArgBrew";                          then brew;                     fi
 	if is_true "$ArgUpload";                        then upload;                   fi
 	if is_true "$ArgTest";                          then run_test;                 fi
-	
+
 	# Restore
 	if is_true "$ArgCompile" || is_true "$ArgBrew"; then restore_kfeditorconf;     fi
 }

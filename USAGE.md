@@ -2,7 +2,7 @@
 [![title](https://img.shields.io/badge/Help-Page-w)](https://github.com/GenZmeY/KF2-BuildTools)
 [![version](https://img.shields.io/github/v/tag/genzmey/KF2-BuildTools)](https://github.com/GenZmeY/KF2-BuildTools/tags)
 [![docs-autoupdate](https://github.com/GenZmeY/KF2-BuildTools/actions/workflows/docs-autoupdate.yml/badge.svg)](https://github.com/GenZmeY/KF2-BuildTools/actions/workflows/docs-autoupdate.yml)
-```
+```text
 Usage: ./tools/builder OPTIONS
 
 Compile, brew, test and upload your kf2 packages to the Steam Workshop.
