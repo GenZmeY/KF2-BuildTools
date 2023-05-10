@@ -71,13 +71,13 @@ If you have *.upk or localization files, they must be in a specific location.
 Change the filesystem of the project to such a form that everything works correctly:  
 ```text
 📂 <ProjectName>
-├── 📁 SomePackageName1
+├── 📁 <SomePackageName1>
 │   ├── 📁 Classes
 │   │   ├── 📄 *.uc
 │   │   └── 📄 *.upkg
 │   ├── 📄 *.uci
 │   └── 📦 *.upk
-├── 📁 SomePackageName2
+├── 📁 <SomePackageName2>
 │   ├── 📁 Classes
 │   │   ├── 📄 *.uc
 │   │   └── 📄 *.upkg
