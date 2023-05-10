@@ -70,7 +70,7 @@ If you have *.upk or localization files, they must be in a specific location.
 
 Change the filesystem of the project to such a form that everything works correctly:  
 ```text
-📁 <ProjectName>
+📂 <ProjectName>
 ├── 📁 SomePackageName1
 │   ├── 📁 Classes
 │   │   ├── 📄 *.uc
@@ -84,7 +84,7 @@ Change the filesystem of the project to such a form that everything works correc
 │   ├── 📄 *.uci
 │   └── 📦 *.upk
 ├── 📁 PublicationContent
-│   ├── 📄 preview.png
+│   ├── 🌆 preview.png
 │   ├── 📄 description.txt
 │   ├── 📄 tags.txt
 │   └── 📄 title.txt
