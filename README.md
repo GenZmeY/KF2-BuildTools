@@ -70,31 +70,32 @@ If you have *.upk or localization files, they must be in a specific location.
 
 Change the filesystem of the project to such a form that everything works correctly:  
 ```text
-/SomePackageName1
-    *.upk
-    /Classes
-        *.uc
-        *.upkg
-/SomePackageName2
-    *.upk
-    /Classes
-        *.uc
-        *.upkg
-/PublicationContent
-    preview.png
-    description.txt
-    tags.txt
-    title.txt
-/Localization
-    /INT
-        *.int
-/Config
-    *.ini
-/BrewedPC
-    *.*
-/tools
-    builder
-builder.cfg
+📦 <Project>
+├── 📁 SomePackageName1
+│   ├── 📁 Classes
+│   │   ├── 📄 *.uc
+│   │   └── 📄 *.upkg
+│   └── 📄 *.upk
+├── 📁 SomePackageName2
+│   ├── 📁 Classes
+│   │   ├── 📄 *.uc
+│   │   └── 📄 *.upkg
+│   └── 📄 *.upk
+├── 📁 PublicationContent
+│   ├── 📄 preview.png
+│   ├── 📄 description.txt
+│   ├── 📄 tags.txt
+│   └── 📄 title.txt
+├── 📁 Localization
+│   └── 📁 INT
+│       └── 📄 *.int
+├── 📁 Config
+│   └── 📄 *.ini
+├── 📁 BrewedPC
+│   └── 📄 *.*
+├── 📁 tools
+│   └── 📄 builder
+└── 📄 builder.cfg
 ```
 
 **Note:** Use the `BrewedPC` folder for additional content such as sound files for your weapons or other stuff. This will be copied to the final BrewedPC before being uploaded to the workshop.  
