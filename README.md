@@ -75,11 +75,13 @@ Change the filesystem of the project to such a form that everything works correc
 │   ├── 📁 Classes
 │   │   ├── 📄 *.uc
 │   │   └── 📄 *.upkg
+│   ├── 📄 *.uci
 │   └── 📄 *.upk
 ├── 📁 SomePackageName2
 │   ├── 📁 Classes
 │   │   ├── 📄 *.uc
 │   │   └── 📄 *.upkg
+│   ├── 📄 *.uci
 │   └── 📄 *.upk
 ├── 📁 PublicationContent
 │   ├── 📄 preview.png
