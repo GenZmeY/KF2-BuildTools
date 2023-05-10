@@ -70,19 +70,19 @@ If you have *.upk or localization files, they must be in a specific location.
 
 Change the filesystem of the project to such a form that everything works correctly:  
 ```text
-📦 <Project>
+📁 <ProjectName>
 ├── 📁 SomePackageName1
 │   ├── 📁 Classes
 │   │   ├── 📄 *.uc
 │   │   └── 📄 *.upkg
 │   ├── 📄 *.uci
-│   └── 📄 *.upk
+│   └── 📦 *.upk
 ├── 📁 SomePackageName2
 │   ├── 📁 Classes
 │   │   ├── 📄 *.uc
 │   │   └── 📄 *.upkg
 │   ├── 📄 *.uci
-│   └── 📄 *.upk
+│   └── 📦 *.upk
 ├── 📁 PublicationContent
 │   ├── 📄 preview.png
 │   ├── 📄 description.txt
@@ -94,9 +94,9 @@ Change the filesystem of the project to such a form that everything works correc
 ├── 📁 Config
 │   └── 📄 *.ini
 ├── 📁 BrewedPC
-│   └── 📄 *.*
+│   └── 📦 *.*
 ├── 📁 tools
-│   └── 📄 builder
+│   └── ⚙️ builder
 └── 📄 builder.cfg
 ```
 
