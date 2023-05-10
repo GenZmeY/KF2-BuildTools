@@ -114,4 +114,4 @@ By the way, this allows you to use a script to upload maps (although this was no
 - [UnofficialMod](https://github.com/GenZmeY/UnofficialMod)
 
 ## License
-[GNU GPLv3](LICENSE)
+[![license](https://www.gnu.org/graphics/gplv3-with-text-136x68.png)](LICENSE)
