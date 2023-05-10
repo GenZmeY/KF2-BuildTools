@@ -29,15 +29,14 @@ Add submodule: `git submodule add https://github.com/GenZmeY/KF2-BuildTools tool
 Get updates: `pushd tools && git pull && popd`  
 Commit the changes: `git add tools && git commit -m 'update tools'`  
 
+### 2. As standalone script
+Just create a `tools` folder and put [builder](builder) there.  
+
 ## Updating build tools
 Since version 1.9.0 build script can update itself:  
 `./tools/builder --update`  
 
 *if you have an older version you need to update once manually to start using this feature*  
-
-### 2. As standalone script
-Just create a `tools` folder and put [builder](builder) there.  
-Now you can use the script in the same way as in the first case, but you will have to update it yourself.  
 
 ## Usage
 Available commands can be found here: [USAGE.md](USAGE.md)  
