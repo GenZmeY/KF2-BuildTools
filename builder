@@ -222,7 +222,7 @@ function warn () # $1: String
 	msg "${1-}" "${YLW}"
 }
 
-function usage ()
+function show_help ()
 {
 	local HelpMessage=""
 
@@ -265,7 +265,12 @@ function version ()
 		Version="(standalone)"
 	fi
 
-	msg "$ScriptName $Version" "${BLD}"
+	echo "$Version"
+}
+
+function show_version ()
+{
+	msg "$ScriptName $(version)" "${BLD}"
 }
 
 function cleanup()
@@ -1038,12 +1043,15 @@ function update ()
 
 function update_by_git ()
 {
-	if git pull origin master; then
+	local Version
+
+	if git pull origin master --tags; then
+		Version="$(version)"
 		pushd "$MutSource" &> /dev/null
 		git add "$ScriptDir" &> /dev/null
-		git commit -m "update build tools"
+		git commit -m "update build tools to $Version"
 		popd &> /dev/null
-		msg "Successfully updated" "${GRN}"
+		msg "Successfully updated to $Version" "${GRN}"
 	else
 		err "Error downloading update"
 	fi
@@ -1129,7 +1137,7 @@ function parse_params () # $@: Args
 
 function main ()
 {
-	if [[ $# -eq 0 ]]; then usage; die "" 0; fi
+	if [[ $# -eq 0 ]]; then show_help; die "" 0; fi
 	parse_params "$@"
 	setup_colors
 	export PATH="$PATH:$ThirdPartyBin"
@@ -1138,9 +1146,9 @@ function main ()
 	if is_true "$ArgDebug";                         then set -o xtrace;            fi
 
 	# Help
-	if is_true "$ArgVersion" && is_true "$ArgHelp"; then version; usage; die "" 0; fi
-	if is_true "$ArgVersion";                       then version;        die "" 0; fi
-	if is_true "$ArgHelp";                          then usage;          die "" 0; fi
+	if is_true "$ArgVersion" && is_true "$ArgHelp"; then show_version; show_help; die "" 0; fi
+	if is_true "$ArgVersion";                       then show_version;            die "" 0; fi
+	if is_true "$ArgHelp";                          then show_help;               die "" 0; fi
 
 	# Checks
 	if [[ -z "$KFSteamLibraryFolder" ]]; then
