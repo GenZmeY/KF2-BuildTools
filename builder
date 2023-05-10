@@ -131,6 +131,7 @@ ArgQuiet="false"
 ArgHoldEditor="false"
 ArgNoColors="false"
 ArgForce="false"
+ArgUpdate="false"
 
 # Colors
 RED=''
@@ -241,6 +242,7 @@ ${BLD}Available options:${DEF}
    -he, --hold-editor  do not close kf2editor automatically
    -nc, --no-colors    do not use color output
     -d, --debug        print every executed command (script debug)
+        --update       update build tools
     -v, --version      show version
     -h, --help         show this help
 
@@ -1021,6 +1023,53 @@ function run_test ()
 	CMD //C "$(cygpath -w "$KFGame")" "$Map?Difficulty=$Difficulty?GameLength=$GameLength?Game=$Game?Mutator=$Mutators?$Args" $UseUnpublished -log
 }
 
+function update ()
+{
+	pushd "$ScriptDir" &> /dev/null
+	if command -v git &> /dev/null && git rev-parse --git-dir &> /dev/null; then
+		update_by_git
+	elif command -v curl &> /dev/null; then
+		update_by_curl
+	else
+		err "Can't update: curl not found"
+	fi
+	popd &> /dev/null
+}
+
+function update_by_git ()
+{
+	if git pull origin master; then
+		pushd "$MutSource" &> /dev/null
+		git add "$ScriptDir" &> /dev/null
+		git commit -m "update build tools"
+		popd &> /dev/null
+		msg "Successfully updated" "${GRN}"
+	else
+		err "Error downloading update"
+	fi
+}
+
+function update_by_curl ()
+{
+	local Url='https://raw.githubusercontent.com/GenZmeY/KF2-BuildTools/master/builder'
+	local New
+
+	New="$(mktemp.exe -u)"
+
+	if curl -L "$Url" -o "$New"; then
+		if cmp -s "$ScriptFullname" "$New"; then
+			msg "Already the latest version" "${GRN}"
+		else
+			mv -f "$New" "$ScriptFullname"
+			msg "Successfully updated" "${GRN}"
+		fi
+	else
+		err "Error downloading update"
+	fi
+
+	rm -f "$New"
+}
+
 function parse_combined_params () # $1: Combined short parameters
 {
 	local Param="${1}"
@@ -1069,6 +1118,7 @@ function parse_params () # $@: Args
 			 -he | --hold-editor ) ArgHoldEditor="true"              ;;
 			 -nc | --no-color    ) ArgNoColors="true"                ;;
 			  -f | --force       ) ArgForce="true"                   ;;
+			       --update      ) ArgUpdate="true"                  ;;
 			       --*           ) die "Unknown option: ${1}" 1      ;;
 			  -*                 ) parse_combined_params "${1}"      ;;
 			     *               ) if [[ -n "${1-}" ]]; then die "Unknown option: ${1-}" 1; fi; break ;;
@@ -1112,6 +1162,7 @@ function main ()
 	if is_true "$ArgCompile" || is_true "$ArgBrew"; then backup_kfeditorconf;      fi
 
 	# Actions
+	if is_true "$ArgUpdate";                        then update;                   fi
 	if is_true "$ArgInit";                          then init;                     fi
 	if is_true "$ArgCompile";                       then compile;                  fi
 	if is_true "$ArgBrew";                          then brew;                     fi

@@ -25,9 +25,15 @@ Make sure that the location of folders and files in your project as follows (Cor
 Open git-bash and go to your project: `cd <your_project_path>`  
 Add submodule: `git submodule add https://github.com/GenZmeY/KF2-BuildTools tools`  
 
-**updating build tools:**  
+**updating build tools (manual)**  
 Get updates: `pushd tools && git pull && popd`  
 Commit the changes: `git add tools && git commit -m 'update tools'`  
+
+## Updating build tools
+Since version 1.9.0 build script can update itself:  
+`./tools/builder --update`  
+
+*if you have an older version you need to update once manually to start using this feature*  
 
 ### 2. As standalone script
 Just create a `tools` folder and put [builder](builder) there.  
