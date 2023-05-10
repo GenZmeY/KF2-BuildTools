@@ -1,6 +1,6 @@
 # KF2-BuildTools
 [![version](https://img.shields.io/github/v/tag/genzmey/KF2-BuildTools)](https://github.com/GenZmeY/KF2-BuildTools/tags)
-[![shellcheck](https://github.com/GenZmeY/KF2-BuildTools/actions/workflows/shellcheck-master.yml/badge.svg)](https://github.com/GenZmeY/KF2-BuildTools/actions/workflows/shellcheck-master.yml)
+[![shellcheck](https://github.com/GenZmeY/KF2-BuildTools/actions/workflows/shellcheck.yml/badge.svg)](https://github.com/GenZmeY/KF2-BuildTools/actions/workflows/shellcheck.yml)
 [![MegaLinter](https://github.com/GenZmeY/KF2-BuildTools/actions/workflows/mega-linter.yml/badge.svg?branch=master)](https://github.com/GenZmeY/KF2-BuildTools/actions/workflows/mega-linter.yml)
 [![docs-autoupdate](https://github.com/GenZmeY/KF2-BuildTools/actions/workflows/docs-autoupdate.yml/badge.svg)](https://github.com/GenZmeY/KF2-BuildTools/actions/workflows/docs-autoupdate.yml)
 [![license](https://img.shields.io/github/license/GenZmeY/KF2-Server-Extension)](LICENSE)
