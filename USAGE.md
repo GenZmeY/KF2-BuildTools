@@ -18,6 +18,7 @@ Available options:
    -he, --hold-editor  do not close kf2editor automatically
    -nc, --no-colors    do not use color output
     -d, --debug        print every executed command (script debug)
+        --update       update build tools
     -v, --version      show version
     -h, --help         show this help
 
