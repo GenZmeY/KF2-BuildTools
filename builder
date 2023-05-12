@@ -1048,8 +1048,13 @@ function update_by_git ()
 	if git pull origin master --tags; then
 		Version="$(version)"
 		pushd "$MutSource" &> /dev/null
-		git add "$ScriptDir" &> /dev/null
-		git commit -m "update build tools to $Version"
+		if [[ -z "$(git diff --name-only --staged)" ]]; then
+			git add "$ScriptDir" &> /dev/null
+			git commit -m "update build tools to $Version"
+		else
+			warn "The build tools updated to $Version"
+			warn "This update is not commited because staged files were found in the project folder"
+		fi
 		popd &> /dev/null
 		msg "Successfully updated to $Version" "${GRN}"
 	else
