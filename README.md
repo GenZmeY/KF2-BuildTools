@@ -14,7 +14,9 @@
 ## Requirements
 - [Killing Floor 2](https://store.steampowered.com/app/232090/Killing_Floor_2/);
 - Killing Floor 2 - SDK;
-- [git-bash](https://git-scm.com/download/win).
+- [git-bash](https://git-scm.com/download/win). **(\*)**
+
+**(\*)** Should also work fine on [MSYS2](https://www.msys2.org/) with [git](https://packages.msys2.org/package/git) installed (`pacman -S git`). But I don't test it.  
 
 ## Add to your project
 Make sure that the location of folders and files in your project as follows (Correct it if it's not):  
