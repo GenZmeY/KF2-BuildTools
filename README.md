@@ -28,7 +28,7 @@ Open git-bash and go to your project: `cd <your_project_path>`
 Add submodule: `git submodule add https://github.com/GenZmeY/KF2-BuildTools tools`  
 
 **updating build tools (manual)**  
-Get updates: `pushd tools && git pull && popd`  
+Get updates: `pushd tools && git pull origin master ; popd`  
 Commit the changes: `git add tools && git commit -m 'update tools'`  
 
 ### 2. As standalone script
