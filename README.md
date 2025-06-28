@@ -1,15 +1,17 @@
-# KF2-BuildTools
-[![version](https://img.shields.io/github/v/tag/genzmey/KF2-BuildTools)](https://github.com/GenZmeY/KF2-BuildTools/tags)
+# Build Tools
 [![shellcheck](https://github.com/GenZmeY/KF2-BuildTools/actions/workflows/shellcheck.yml/badge.svg)](https://github.com/GenZmeY/KF2-BuildTools/actions/workflows/shellcheck.yml)
-[![MegaLinter](https://github.com/GenZmeY/KF2-BuildTools/actions/workflows/mega-linter.yml/badge.svg?branch=master)](https://github.com/GenZmeY/KF2-BuildTools/actions/workflows/mega-linter.yml)
 [![docs-autoupdate](https://github.com/GenZmeY/KF2-BuildTools/actions/workflows/docs-autoupdate.yml/badge.svg)](https://github.com/GenZmeY/KF2-BuildTools/actions/workflows/docs-autoupdate.yml)
-[![license](https://img.shields.io/github/license/GenZmeY/KF2-Server-Extension)](LICENSE)
+[![version](https://img.shields.io/github/v/tag/genzmey/KF2-BuildTools)](CHANGELOG.md)
+[![license](https://img.shields.io/github/license/GenZmeY/KF2-BuildTools)](COPYING)
+
+## Description
+Automation of mod assembly for [Killing Floor 2](https://store.steampowered.com/app/232090/Killing_Floor_2/) and some related actions.  
 
 ## Features
-- Build, brew, test and upload to Steam Workshop;
-- No need to edit KFEditor.ini at all;
-- Sources can be stored in any path;
-- Easily switch between different projects.
+- Build, brew, test and upload to Steam Workshop  
+- No need to edit KFEditor.ini at all  
+- Sources can be stored in any path  
+- Easily switch between different projects  
 
 ## Requirements
 - [Killing Floor 2](https://store.steampowered.com/app/232090/Killing_Floor_2/);
@@ -28,8 +30,8 @@ Open git-bash and go to your project: `cd <your_project_path>`
 Add submodule: `git submodule add https://github.com/GenZmeY/KF2-BuildTools tools`  
 
 **updating build tools (manual)**  
-Get updates: `pushd tools && git pull origin master ; popd`  
-Commit the changes: `git add tools && git commit -m 'update tools'`  
+Get updates: `pushd tools && git pull origin master; popd`  
+Commit the changes: `git add tools && git commit -m 'update build tools'`  
 
 ### 2. As standalone script
 Just create a `tools` folder and put [builder](builder) there.  
@@ -49,10 +51,10 @@ If you have a simple mutator or game mode, then the usage is also simple: just u
 
 ### The result can be found here
 **Compiled packages:**  
-`C:\Users\<username>\Documents\My Games\KillingFloor2\KFGame\Unpublished\`  
+`%USERPROFILE%\Documents\My Games\KillingFloor2\KFGame\Unpublished\`  
 
 **Brewed packages:**  
-`C:\Users\<username>\Documents\My Games\KillingFloor2\KFGame\Published\`  
+`%USERPROFILE%\Documents\My Games\KillingFloor2\KFGame\Published\`  
 
 **Uploaded packages:**  
 your steam workshop 🙃  
@@ -102,9 +104,22 @@ Change the filesystem of the project to such a form that everything works correc
 ```
 
 **Note:** Use the `BrewedPC` folder for additional content such as sound files for your weapons or other stuff. This will be copied to the final BrewedPC before being uploaded to the workshop.  
-By the way, this allows you to use a script to upload maps (although this was not its original purpose). Just put the map(s) in `BrewedPC` (don't forget to edit the `PublicationContent`) and run `./tools/builder -u`.
+By the way, this allows you to use a script to upload maps (although this was not its original purpose). Just put the map(s) in `BrewedPC` (don't forget to edit the `PublicationContent`) and run `./tools/builder -u`.  
 
-### Examples (Projects that use KF2-BuildTools)
+## Troubleshooting
+⚠️ Do not run the build while `KFEditor.exe` or `KFGame.exe` is running - they will interfere with the build. Running build separately will already allow you to avoid most problems.  
+
+**The build is stuck but KFEditor.exe window doesn't disappear and shows successful compilation/brewing:**  
+Make the KFEditor.exe window active and press CTRL+C.  
+
+**The build is stuck at the "wait for the log" stage:**  
+Stop the build, clear the logs folder:  
+```
+%USERPROFILE%\Documents\My Games\KillingFloor2\KFGame\Logs\
+```
+Then repeat the build.  
+
+## Examples (Projects that use Build Tools)
 **Simplest case (one mutator):**  
 - [AdminAutoLogin](https://github.com/GenZmeY/KF2-AdminAutoLogin)
 - [StartWave](https://github.com/GenZmeY/KF2-StartWave)
@@ -117,11 +132,24 @@ By the way, this allows you to use a script to upload maps (although this was no
 - [YetAnotherScoreboard](https://github.com/GenZmeY/KF2-YetAnotherScoreboard)
 
 **Two mutators are compiled, there are upk and localization:**  
-- [ServerExt](https://github.com/GenZmeY/KF2-Server-Extension)
+- [ServerExtension](https://github.com/GenZmeY/KF2-Server-Extension)
 
 **Three mutators are compiled (one of them is a dependency),**  
 **two mutators are uploaded to the steam workshop:**  
 - [UnofficialMod](https://github.com/GenZmeY/UnofficialMod)
 
+## Contributors and Credits
+- [amione](https://github.com/xamionex) - bug fixes  
+
+## Status: Completed
+- Build Tools works with the current version of the game (v1150) and I have implemented everything I planned.  
+- Development has stopped: I no longer have the time or motivation to maintain this tool. No further updates or bug fixes are planned.  
+
+## Mirrors
+- https://github.com/GenZmeY/KF2-BuildTools  
+- https://codeberg.org/GenZmeY/KF2-BuildTools  
+
 ## License
-[![license](https://www.gnu.org/graphics/gplv3-with-text-136x68.png)](LICENSE)
+**GPL-3.0-or-later**  
+  
+[![license](https://www.gnu.org/graphics/gplv3-with-text-136x68.png)](COPYING)  
